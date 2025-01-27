@@ -45,3 +45,9 @@ class Entry:
         self.acc = acc
         self.acc.change_value(amount, mode)
         self.date = datetime.date.today()
+
+dft_acc = [Account("Cash"), Account("Card"), Account("Savings")]
+dft_ctg = [Category("Food"), Category("Transport"),
+           Category("Communication"), Category("Tourism"),
+           Category("Clothing"), Category("Cleaning"),
+           Category("Home")]
