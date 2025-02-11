@@ -1,5 +1,11 @@
 import datetime
 
+month_names = ["January", "February", "March", "April",
+               "May", "June", "July", "August",
+               "September", "October", "November", "December"]
+
+disp_month = int(datetime.date.today().month) - 1
+disp_year = int(datetime.date.today().year)
 
 class Category:
 
@@ -39,10 +45,11 @@ class Account:
 
 class Entry:
 
-    def __init__(self, ctg: Category, amount: float, acc: Account, mode: bool):
+    def __init__(self, ctg: Category, amount: float, acc: Account, mode: bool, description: str = ""):
         self.ctg = ctg
         self.amount = amount
         self.acc = acc
+        self.description = description
         self.acc.change_value(amount, mode)
         self.date = datetime.date.today()
 
@@ -51,3 +58,4 @@ dft_ctg = [Category("Food"), Category("Transport"),
            Category("Communication"), Category("Tourism"),
            Category("Clothing"), Category("Cleaning"),
            Category("Home")]
+view_height = 0
