@@ -59,3 +59,5 @@ dft_ctg = [Category("Food"), Category("Transport"),
            Category("Clothing"), Category("Cleaning"),
            Category("Home")]
 view_height = 0
+dft_currencies = {"€":True, "$":True, "TRY":False} #True if the symbol is to the left, False if it is to the right.
+

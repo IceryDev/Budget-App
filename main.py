@@ -10,6 +10,7 @@ from kivy.app import App
 from kivy.uix.label import Label
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.textinput import TextInput
+from kivy.uix.popup import Popup
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle
 from kivy.uix.image import Image
@@ -150,19 +151,30 @@ class EntryButton(FloatLayout):
 
         self.button = Button(size_hint=(None, None),
                              pos_hint={'center_x':0.5, 'center_y':0.3},
-                             size=(50, 50),
+                             size=(75, 75),
                              background_color=(0, 0, 0, 0))
-        self.img = Image()
+        self.img = Image(source="Images/addentry.png")
         self.button.add_widget(self.img)
-        self.button.bind(size=self._update_image_pos, pos=self._update_image_pos)
-
+        self.button.bind(size=self._update_image_pos, pos=self._update_image_pos, on_press=self.entry_menu)
+        self.menu_popup = Popup(title="Add Entry:", content=PopupLayout(), size_hint=(0.9, 0.7))
         self.add_widget(self.button)
 
     def _update_image_pos(self, *args):
         self.img.size = self.button.size
         self.img.pos = self.button.pos
 
+    def entry_menu(self, *args):
+        self.menu_popup.open()
 
+class PopupLayout(GridLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.cols = 1
+
+        self.add_widget(Label(text="Amount", size_hint=(1, 0.1), halign="left"))
+        self.add_widget(Label(text="", size_hint=(1, 0.7)))
+        self.add_widget(TextInput(size_hint=(1, 0.1)))
+        self.add_widget(TextInput(size_hint=(1, 0.1)))
 
 class BaseApp(App):
     def build(self):
