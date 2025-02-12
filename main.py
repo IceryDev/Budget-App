@@ -1,8 +1,6 @@
 import kivy
 from kivy.config import Config
 
-from resources import disp_month, disp_year
-
 Config.set('graphics', 'width', '320')
 Config.set('graphics', 'height', '620')
 
@@ -21,6 +19,7 @@ from kivy.uix.button import Button
 
 from functools import partial
 import resources as rs
+import ba_funcs as baf
 import datetime
 
 class TitleBox(BoxLayout):
@@ -166,15 +165,66 @@ class EntryButton(FloatLayout):
     def entry_menu(self, *args):
         self.menu_popup.open()
 
-class PopupLayout(GridLayout):
+class PopupLayout(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cols = 1
+        self.amount_text = Label(text="Amount:", size_hint=(1, 0.1),
+                                 halign="left", pos_hint={'top':1.01, 'x':0.035},
+                                 font_size=17)
+        self.amount_text.bind(size=self.amount_text.setter('text_size'))
 
-        self.add_widget(Label(text="Amount", size_hint=(1, 0.1), halign="left"))
-        self.add_widget(Label(text="", size_hint=(1, 0.7)))
-        self.add_widget(TextInput(size_hint=(1, 0.1)))
-        self.add_widget(TextInput(size_hint=(1, 0.1)))
+        self.amount_box= TextInput(size_hint=(0.935, 0.1), pos_hint={'top':0.9, 'x':0.035},
+                                   multiline=False, input_type='number',
+                                   padding_y=(15, 5), halign='center',
+                                   background_color=(22/255, 22/255, 22/255, 1),
+                                   cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
+                                   padding_x=(10, 10))
+        self.currency_text = Label(text=rs.dft_currencies[rs.currency_choice][0], size_hint=(0.1, 0.1),
+                                   pos_hint={'top':0.9, 'x':baf.align_currency_text(rs.dft_currencies[rs.currency_choice][1], place='text_box')},
+                                   font_size=17)
+
+        self.ctg_text = Label(text="Category:", size_hint=(1, 0.1),
+                                 halign="left", pos_hint={'top': 0.79, 'x': 0.035},
+                                 font_size=17)
+        self.ctg_text.bind(size=self.ctg_text.setter('text_size'))
+
+        self.ctg_scroll = ScrollView(do_scroll_x=True,
+                                     do_scroll_y=False, size_hint=(0.935, 0.2),
+                                     pos_hint={'top': 0.68, 'x':0.035})
+
+        self.ctg_scroll_ui = CtgSelector(size_hint_x=self.ctg_scroll.width/12)
+        self.ctg_scroll_ui.bind(minimum_width=self.ctg_scroll_ui.setter('width'))
+
+        self.ctg_scroll.add_widget(self.ctg_scroll_ui)
+
+        self.add_widget(self.amount_text)
+        self.add_widget(self.amount_box)
+        self.add_widget(self.currency_text)
+        self.add_widget(self.ctg_text)
+        self.add_widget(self.ctg_scroll)
+        #self.add_widget(TextInput(size_hint=(1, 0.1)))
+
+class CtgSelector(GridLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        with self.canvas.before:
+            Color(22/255, 22/255, 22/255, 1)
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+            self.bind(size=self._update_rect, pos=self._update_rect)
+
+        self.rows = 1
+        self.spacing = 1
+        self.padding = [0, 5, 0, 0]
+        #self.width = rs.ctg_view_width
+        for x in range(30):
+            self.add_widget(Image(source="Images/Analytics.png"))
+
+    def _update_rect(self, *args):
+        self.rect.size = self.size
+        self.rect.pos = self.pos
+
 
 class BaseApp(App):
     def build(self):

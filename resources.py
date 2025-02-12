@@ -45,19 +45,24 @@ class Account:
 
 class Entry:
 
-    def __init__(self, ctg: Category, amount: float, acc: Account, mode: bool, description: str = ""):
+    def __init__(self, ctg: Category, amount: float, acc: Account, mode: bool, description: str = "", date = datetime.date.today()):
         self.ctg = ctg
         self.amount = amount
         self.acc = acc
         self.description = description
         self.acc.change_value(amount, mode)
-        self.date = datetime.date.today()
+        self.date = date
 
 dft_acc = [Account("Cash"), Account("Card"), Account("Savings")]
-dft_ctg = [Category("Food"), Category("Transport"),
-           Category("Communication"), Category("Tourism"),
-           Category("Clothing"), Category("Cleaning"),
-           Category("Home")]
+dft_ctg = [Category("Food", "Images/Analytics.png"), Category("Transport", "Images/Analytics.png"),
+           Category("Communication", "Images/Analytics.png"), Category("Tourism", "Images/Analytics.png"),
+           Category("Clothing", "Images/Analytics.png"), Category("Cleaning", "Images/Analytics.png"),
+           Category("Home", "Images/Analytics.png")]
 view_height = 0
-dft_currencies = {"€":True, "$":True, "TRY":False} #True if the symbol is to the left, False if it is to the right.
+ctg_view_width = 0
+dft_currencies = [["€", True], ["$",True], ["TRY",False]] #True if the symbol is to the left, False if it is to the right.
+currency_choice = 2 #The index of the currency above
 
+class PlaceDoesNotExistError(Exception):
+    #See ba_funcs, align_currency_text
+    pass
