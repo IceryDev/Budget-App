@@ -12,8 +12,10 @@ from kivy.uix.popup import Popup
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Rectangle
 from kivy.uix.image import Image
+from kivy.uix.dropdown import DropDown
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.togglebutton import ToggleButton
 from kivy.core.window import Window
 from kivy.uix.button import Button
 
@@ -155,7 +157,7 @@ class EntryButton(FloatLayout):
         self.img = Image(source="Images/addentry.png")
         self.button.add_widget(self.img)
         self.button.bind(size=self._update_image_pos, pos=self._update_image_pos, on_press=self.entry_menu)
-        self.menu_popup = Popup(title="Add Entry:", content=PopupLayout(), size_hint=(0.9, 0.7))
+        self.menu_popup = Popup(title="Add Entry:", content=PopupLayout(), size_hint=(0.9, 0.8))
         self.add_widget(self.button)
 
     def _update_image_pos(self, *args):
@@ -164,46 +166,137 @@ class EntryButton(FloatLayout):
 
     def entry_menu(self, *args):
         self.menu_popup.open()
+        self.menu_popup.content.popup = self.menu_popup
 
 class PopupLayout(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cols = 1
+        self.t_amount = 0
+        self.t_mode = False
+        self.t_ctg = rs.dft_ctg[0]
+        self.t_desc = ""
+        self.t_acc = rs.dft_acc[0] #Change this so it appears as the last used account
+        self.t_date = datetime.date.today() #Change this later
+        self.popup = Popup()
+
         self.amount_text = Label(text="Amount:", size_hint=(1, 0.1),
-                                 halign="left", pos_hint={'top':1.01, 'x':0.035},
+                                 halign="left", pos_hint={'top':1.05, 'x':0.035},
                                  font_size=17)
         self.amount_text.bind(size=self.amount_text.setter('text_size'))
 
-        self.amount_box= TextInput(size_hint=(0.935, 0.1), pos_hint={'top':0.9, 'x':0.035},
+        self.amount_box= TextInput(size_hint=(0.935, 0.1), pos_hint={'top':0.94, 'x':0.035},
                                    multiline=False, input_type='number',
                                    padding_y=(15, 5), halign='center',
                                    background_color=(22/255, 22/255, 22/255, 1),
                                    cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
-                                   padding_x=(10, 10))
+                                   padding_x=(10, 10), text="0")
         self.currency_text = Label(text=rs.dft_currencies[rs.currency_choice][0], size_hint=(0.1, 0.1),
-                                   pos_hint={'top':0.9, 'x':baf.align_currency_text(rs.dft_currencies[rs.currency_choice][1], place='text_box')},
+                                   pos_hint={'top':0.94, 'x':baf.align_currency_text(rs.dft_currencies[rs.currency_choice][1], place='text_box')},
                                    font_size=17)
+        self.transaction_choice = GridLayout(cols=2, rows=1,
+                                             size_hint=(0.735, 0.05), pos_hint={'top':0.84, 'center_x':0.5})
+
+        self.e_button = ToggleButton(text="Expense", group="transaction", state="down")
+        self.d_button = ToggleButton(text="Deposit", group="transaction")
+
+        self.transaction_choice.add_widget(self.e_button)
+        self.transaction_choice.add_widget(self.d_button)
+
+        self.account_select = DropDown()
+        for i in range(rs.dft_acc.__len__()):
+            self.account_choice = NumericalButton(text=rs.dft_acc[i].name, size_hint_y=None, height=20, no=i)
+            self.account_choice.bind(on_release=lambda a: self.account_select.select(a.no))
+            self.account_select.add_widget(self.account_choice)
+        self.account_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.75, 'center_x': 0.5},
+                                     text="Cash")
+        self.account_button.bind(on_press=self.account_select.open)
+        self.account_select.bind(on_select=lambda instance, a: setattr(self.account_button, 'text', rs.dft_acc[a].name))
 
         self.ctg_text = Label(text="Category:", size_hint=(1, 0.1),
-                                 halign="left", pos_hint={'top': 0.79, 'x': 0.035},
+                                 halign="left", pos_hint={'top': 0.7, 'x': 0.035},
                                  font_size=17)
         self.ctg_text.bind(size=self.ctg_text.setter('text_size'))
 
         self.ctg_scroll = ScrollView(do_scroll_x=True,
-                                     do_scroll_y=False, size_hint=(0.935, 0.2),
-                                     pos_hint={'top': 0.68, 'x':0.035})
+                                     do_scroll_y=False, size_hint=(0.935, 0.18),
+                                     pos_hint={'top': 0.59, 'x':0.035})
 
-        self.ctg_scroll_ui = CtgSelector(size_hint_x=self.ctg_scroll.width/12)
+        self.ctg_scroll_ui = CtgSelector(size_hint_x=self.ctg_scroll.width/(rs.dft_ctg.__len__()**2))
         self.ctg_scroll_ui.bind(minimum_width=self.ctg_scroll_ui.setter('width'))
-
         self.ctg_scroll.add_widget(self.ctg_scroll_ui)
+
+        self.desc_text = Label(text="Description:", size_hint=(1, 0.1),
+                              halign="left", pos_hint={'top': 0.46, 'x': 0.035},
+                              font_size=17)
+        self.desc_text.bind(size=self.desc_text.setter('text_size'))
+
+        self.desc_box = TextInput(size_hint=(0.935, 0.2), pos_hint={'top': 0.35, 'x': 0.035},
+                                    multiline=True, padding_y=(15, 5), halign='center',
+                                    background_color=(22 / 255, 22 / 255, 22 / 255, 1),
+                                    cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
+                                    padding_x=(10, 10))
+
+        self.date_choice = Button(background_color=(66 / 255, 66 / 255, 66 / 255, 1),
+                                  text=f"{rs.month_names[(datetime.date.today().month % 12) - 1]}, {rs.disp_year}",
+                                  size_hint=(0.935, 0.07), pos_hint={'top': 0.14, 'center_x': 0.5})
+
+        self.confirm_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.05, 'center_x': 0.5},
+                                     text="Confirm")
+        self.confirm_button.bind(on_press=self.callback)
 
         self.add_widget(self.amount_text)
         self.add_widget(self.amount_box)
         self.add_widget(self.currency_text)
+        self.add_widget(self.transaction_choice)
+        self.add_widget(self.account_button)
         self.add_widget(self.ctg_text)
         self.add_widget(self.ctg_scroll)
-        #self.add_widget(TextInput(size_hint=(1, 0.1)))
+        self.add_widget(self.desc_text)
+        self.add_widget(self.desc_box)
+        self.add_widget(self.date_choice)
+        self.add_widget(self.confirm_button)
+
+    def expense(self, instance, value):
+        if value == 'down':
+            self.t_mode = False
+
+    def deposit(self, instance, value):
+        if value == 'down':
+            self.t_mode = True
+
+    def callback(self, *args):
+        self.account_select.bind(on_select=lambda instance, a: setattr(self, 't_acc', rs.dft_acc[a]))
+        self.t_amount = float(self.amount_box.text)
+        self.t_desc = self.desc_box.text
+        self.t_ctg = rs.temp_ctg
+        rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc)
+        print(f"{rs.temp_entry.ctg.name}, {rs.temp_entry.amount}, {rs.temp_entry.acc.value}") #Continue here
+        self.popup.dismiss()
+
+class CtgButton(ToggleButton):
+    def __init__(self, ctg: rs.Category, **kwargs):
+        super().__init__(**kwargs)
+        self.ctg = ctg
+        self.background_color = (0, 0, 0, 0)
+        self.background_down = 'white'
+
+        self.img = Image(source=self.ctg.icon_path)
+        self.bind(size=self._update_image_pos, pos=self._update_image_pos, state=self._state_change)
+        self.add_widget(self.img)
+
+    def _update_image_pos(self, *args):
+        self.img.size = self.size
+        self.img.pos = self.pos
+
+    def _state_change(self, instance, value):
+        if value == 'down':
+            self.background_color = (200/255, 200/255, 200/255, 50/100)
+            rs.temp_ctg = self.ctg
+        else:
+            self.background_color = (0, 0, 0, 0)
+
+
 
 class CtgSelector(GridLayout):
     def __init__(self, **kwargs):
@@ -216,15 +309,21 @@ class CtgSelector(GridLayout):
 
         self.rows = 1
         self.spacing = 1
-        self.padding = [0, 5, 0, 0]
+        self.padding = [0, 0, 0, 0]
         #self.width = rs.ctg_view_width
-        for x in range(30):
-            self.add_widget(Image(source="Images/Analytics.png"))
+        for i in range(rs.dft_ctg.__len__()):
+            a = CtgButton(rs.dft_ctg[i], group="ctg")
+            self.add_widget(a)
+            if i == 0: a.state = 'down'
 
     def _update_rect(self, *args):
         self.rect.size = self.size
         self.rect.pos = self.pos
 
+class NumericalButton(Button):
+    def __init__(self, no: int, **kwargs):
+        super().__init__(**kwargs)
+        self.no = no
 
 class BaseApp(App):
     def build(self):
