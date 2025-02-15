@@ -29,6 +29,8 @@ import resources as rs
 import ba_funcs as baf
 import datetime
 
+scroll_view_main = ScrollView()
+
 class TitleBox(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -151,11 +153,12 @@ class MainInterface(GridLayout):
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().add_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
-        self.do_layout()
+        scroll_view_main.update_from_scroll()
 
     def remove_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().remove_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
+        scroll_view_main.update_from_scroll()
 
     def on_child_change(self, instance, value):
         if self.is_updating: return
@@ -166,7 +169,6 @@ class MainInterface(GridLayout):
         self.children = self.children[1:] + [self.children[0]]
         self.do_layout()
         self.is_updating = False
-
 
 class EntryUI(FloatLayout):
     def __init__(self, entry: rs.Entry, **kwargs):
@@ -380,6 +382,7 @@ class NumericalButton(Button):
 
 class BaseApp(App):
     def build(self):
+        global scroll_view_main
         Window.clearcolor = (22/255, 22/255, 22/255, 1)
 
         main_layout = FloatLayout()
@@ -390,11 +393,9 @@ class BaseApp(App):
 
         mid_layout = ScrollView(size_hint=(1, 0.73), pos_hint={'top':0.87})
         rs.view_height = mid_layout.height
-        rs.scroll_view_main = mid_layout
 
         mid_layout_ui = MainInterface(size_hint_y=rs.shown_entries * mid_layout.height / 700)
         rs.temp_layout = mid_layout_ui
-        mid_layout.simulate_touch_down(200)
 
         mid_layout_ui.bind(minimum_height=mid_layout_ui.setter('height'))
         mid_layout.add_widget(mid_layout_ui)
@@ -411,8 +412,9 @@ class BaseApp(App):
         main_layout.add_widget(bottom_button_ly)
         main_layout.add_widget(bottom_entry_ly)
 
-
+        scroll_view_main = mid_layout
         return main_layout
+
 
 
 if __name__ == "__main__":

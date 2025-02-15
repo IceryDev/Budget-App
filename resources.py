@@ -68,7 +68,6 @@ temp_entry = None #Passes the value to create it in the main view
 temp_layout = None #Passes the main-layout
 entry_list = []
 shown_entries = 10
-scroll_view_main = None
 
 
 class PlaceDoesNotExistError(Exception):
