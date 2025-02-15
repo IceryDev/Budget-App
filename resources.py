@@ -49,14 +49,15 @@ class Entry:
         self.ctg = ctg
         self.amount = amount
         self.acc = acc
+        self.mode = mode
         self.description = description
         self.acc.change_value(amount, mode)
         self.date = date
 
-dft_acc = [Account("Cash"), Account("Card"), Account("Savings")]
-dft_ctg = [Category("Food", "Images/food_ctg.png"), Category("Transport", "Images/Analytics.png"),
-           Category("Communication", "Images/Analytics.png"), Category("Tourism", "Images/Analytics.png"),
-           Category("Clothing", "Images/Analytics.png"), Category("Cleaning", "Images/Analytics.png"),
+dft_acc = [Account("Cash", "Images/Analytics.png"), Account("Card","Images/Analytics.png"), Account("Savings", "Images/Analytics.png")]
+dft_ctg = [Category("Food", "Images/food_ctg.png"), Category("Transport", "Images/transport_ctg.png"),
+           Category("Communication", "Images/comms_ctg.png"), Category("Tourism", "Images/tourism_ctg.png"),
+           Category("Clothing", "Images/clothing_ctg.png"), Category("Cleaning", "Images/Analytics.png"),
            Category("Home", "Images/Analytics.png")]
 view_height = 0 #Adjusts the main scroll view
 ctg_view_width = 0 #Adjusts the new entry popup scroll view
@@ -64,6 +65,11 @@ dft_currencies = [["€", True], ["$",True], ["TRY",False]] #True if the symbol 
 currency_choice = 0 #The index of the currency above
 temp_ctg = dft_ctg[0] #Passes the value from the child button object to parent object
 temp_entry = None #Passes the value to create it in the main view
+temp_layout = None #Passes the main-layout
+entry_list = []
+shown_entries = 10
+scroll_view_main = None
+
 
 class PlaceDoesNotExistError(Exception):
     #See ba_funcs, align_currency_text

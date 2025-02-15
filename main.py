@@ -1,5 +1,10 @@
+import random
+
 import kivy
 from kivy.config import Config
+from kivy.input import MotionEvent
+
+from resources import dft_currencies, currency_choice
 
 Config.set('graphics', 'width', '320')
 Config.set('graphics', 'height', '620')
@@ -132,19 +137,66 @@ class MainInterface(GridLayout):
         super().__init__(**kwargs)
 
         self.cols = 1
+        self.child_count = 0
+        self.is_updating = False
 
-        for x in range(100):
-            self.add_widget(EntryUI(rs.Entry(rs.dft_ctg[0], 10, rs.dft_acc[0], True)))
-            self.add_widget(Image(source="Images/bar.png"))
+        for x in range(10):
+            temp = EntryUI(rs.Entry(rs.dft_ctg[random.randint(0, 4)], 10.00, rs.dft_acc[random.randint(0, 2)], True))
+            self.add_widget(temp, True)
+            rs.shown_entries += 1
+            rs.entry_list.append(temp)
 
-class EntryUI(BoxLayout):
+        self.on_child_change(self, None)
+
+    def add_widget(self, widget, mode: bool = False, *args, **kwargs):
+        super().add_widget(widget, *args, **kwargs)
+        if not mode: self.on_child_change(self, None)
+        self.do_layout()
+
+    def remove_widget(self, widget, mode: bool = False, *args, **kwargs):
+        super().remove_widget(widget, *args, **kwargs)
+        if not mode: self.on_child_change(self, None)
+
+    def on_child_change(self, instance, value):
+        if self.is_updating: return
+
+        self.is_updating = True
+        self.child_count = len(self.children)
+        self.size_hint_y = self.child_count * rs.view_height / 700
+        self.children = self.children[1:] + [self.children[0]]
+        self.do_layout()
+        self.is_updating = False
+
+
+class EntryUI(FloatLayout):
     def __init__(self, entry: rs.Entry, **kwargs):
         super().__init__(**kwargs)
 
         self.height = rs.view_height
-        self.description = Label(text=f"{entry.ctg.name}, {entry.amount}",
-                                 text_size=(int(Config.get('graphics', 'width')), None))
-        self.add_widget(self.description)
+        self.icon = Image(source=entry.ctg.icon_path, pos_hint={'x':-0.25, 'center_y':0.5},
+                          size_hint=(0.7, 0.7))
+        self.category = Label(text=f"{entry.ctg.name}",
+                                 text_size=(int(Config.get('graphics', 'width'))/2, None),
+                                 pos_hint={'center_x':0.4, 'center_y':0.7})
+        self.account_icon = Image(source=entry.acc.icon_path, pos_hint={'x':0.03, 'center_y':0.35},
+                                  size_hint=(0.4, 0.4))
+        self.account_text = Label(text=f"{entry.acc.name}",
+                              text_size=(int(Config.get('graphics', 'width')), None),
+                              pos_hint={'center_x': 0.67, 'center_y': 0.35},
+                              font_size=15)
+        self.amount = Label(text=f"{'-' if entry.mode == False else '+'}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{entry.amount}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                            text_size=(int(Config.get('graphics', 'width')), None),
+                            pos_hint={'center_x': 0.52, 'center_y': 0.5},
+                            halign='right', color=(191/255, 30/255, 30/255, 1) if entry.mode == False else (127/255, 199/255, 127/255, 1),
+                            font_size=22)
+        self.bar = Image(pos_hint={'x': 0.2, 'center_y': 0.1},
+                         size_hint=(0.75, 0.02), color=(88/255, 88/255, 88/255, 1))
+        self.add_widget(self.icon)
+        self.add_widget(self.category)
+        self.add_widget(self.account_icon)
+        self.add_widget(self.account_text)
+        self.add_widget(self.amount)
+        self.add_widget(self.bar)
 
 class EntryButton(FloatLayout):
     def __init__(self, **kwargs):
@@ -199,6 +251,8 @@ class PopupLayout(FloatLayout):
 
         self.e_button = ToggleButton(text="Expense", group="transaction", state="down")
         self.d_button = ToggleButton(text="Deposit", group="transaction")
+        self.e_button.bind(state=self.expense)
+        self.d_button.bind(state=self.deposit)
 
         self.transaction_choice.add_widget(self.e_button)
         self.transaction_choice.add_widget(self.d_button)
@@ -271,7 +325,8 @@ class PopupLayout(FloatLayout):
         self.t_desc = self.desc_box.text
         self.t_ctg = rs.temp_ctg
         rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc)
-        print(f"{rs.temp_entry.ctg.name}, {rs.temp_entry.amount}, {rs.temp_entry.acc.value}") #Continue here
+        rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
+        rs.entry_list.insert(0, EntryUI(rs.temp_entry))
         self.popup.dismiss()
 
 class CtgButton(ToggleButton):
@@ -295,8 +350,6 @@ class CtgButton(ToggleButton):
             rs.temp_ctg = self.ctg
         else:
             self.background_color = (0, 0, 0, 0)
-
-
 
 class CtgSelector(GridLayout):
     def __init__(self, **kwargs):
@@ -336,9 +389,13 @@ class BaseApp(App):
         date_layout = DateBox(size_hint=(1, 0.05), pos_hint={'top':0.92})
 
         mid_layout = ScrollView(size_hint=(1, 0.73), pos_hint={'top':0.87})
+        rs.view_height = mid_layout.height
+        rs.scroll_view_main = mid_layout
 
-        mid_layout_ui = MainInterface(size_hint_y=mid_layout.height/7)
-        rs.view_height = mid_layout.height/7
+        mid_layout_ui = MainInterface(size_hint_y=rs.shown_entries * mid_layout.height / 700)
+        rs.temp_layout = mid_layout_ui
+        mid_layout.simulate_touch_down(200)
+
         mid_layout_ui.bind(minimum_height=mid_layout_ui.setter('height'))
         mid_layout.add_widget(mid_layout_ui)
 
@@ -356,6 +413,7 @@ class BaseApp(App):
 
 
         return main_layout
+
 
 if __name__ == "__main__":
     BaseApp().run()
