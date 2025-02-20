@@ -23,6 +23,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.togglebutton import ToggleButton
 from kivy.core.window import Window
 from kivy.uix.button import Button
+from kivy.properties import NumericProperty
 
 from functools import partial
 import resources as rs
@@ -134,6 +135,56 @@ class DateBox(BoxLayout):
         rs.disp_year = int(datetime.date.today().year) + (rs.disp_month // 12)
         self._update_text()
 
+class AccountBox(FloatLayout):
+    balance = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
+    expense = NumericProperty(-1 * float(sum([x.entry.amount for x in rs.entry_list if x.entry.mode == False])))
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.background = Image(size_hint=(1, 1), pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                                color=(0, 60/255, 64/255, 63/100))
+        self.float_balance = 0.0
+        self.float_expense = 0.0
+
+        rs.temp_acc = self
+
+        self.balance_label = Label(text=f"Balance:",
+                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+                                   pos_hint={'center_x': 0.26, 'center_y': 0.75},
+                                   halign='center', font_size=16)
+        self.expense_label = Label(text=f"Expenses:",
+                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+                                   pos_hint={'center_x': 0.75, 'center_y': 0.75},
+                                   halign='center', font_size=16)
+        self.balance_int = Label(text=f"{baf.sign_setter(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+                                   pos_hint={'center_x': 0.25, 'center_y': 0.25},
+                                   color=baf.color_setter(self.float_balance),
+                                   halign='center', font_size=16)
+        self.bind(balance=self.update_text)
+        self.expense_int = Label(text=f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+                                   pos_hint={'center_x': 0.75, 'center_y': 0.25},
+                                   color=baf.color_setter(self.float_expense),
+                                   halign='center', font_size=16)
+        self.bind(expense=self.update_text)
+
+        self.add_widget(self.background)
+        self.add_widget(self.balance_label)
+        self.add_widget(self.expense_label)
+        self.add_widget(self.balance_int)
+        self.add_widget(self.expense_int)
+
+    def update_text(self, *args):
+        self.balance = float((sum([x.value for x in rs.dft_acc])))
+        self.expense = float(-1 * sum([x.entry.amount for x in rs.entry_list if x.entry.mode == False]))
+
+        self.float_balance = self.balance
+        self.float_expense = self.expense
+        self.balance_int.text = f"{baf.sign_setter(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.balance_int.color = baf.color_setter(self.float_balance)
+        self.expense_int.text = f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.expense_int.color = baf.color_setter(self.float_expense)
+
 class MainInterface(GridLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -143,21 +194,23 @@ class MainInterface(GridLayout):
         self.is_updating = False
 
         for x in range(10):
-            temp = EntryUI(rs.Entry(rs.dft_ctg[random.randint(0, 4)], 10.00, rs.dft_acc[random.randint(0, 2)], True))
+            temp = EntryUI(rs.Entry(rs.dft_ctg[random.randint(0, 6)], 10.00, rs.dft_acc[random.randint(0, 2)], True))
+            rs.entry_list.append(temp)
             self.add_widget(temp, True)
             rs.shown_entries += 1
-            rs.entry_list.append(temp)
 
         self.on_child_change(self, None)
 
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().add_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
+        rs.temp_acc.update_text()
         scroll_view_main.update_from_scroll()
 
     def remove_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().remove_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
+        rs.temp_acc.update_text()
         scroll_view_main.update_from_scroll()
 
     def on_child_change(self, instance, value):
@@ -174,6 +227,8 @@ class EntryUI(FloatLayout):
     def __init__(self, entry: rs.Entry, **kwargs):
         super().__init__(**kwargs)
 
+        self.entry = entry
+
         self.height = rs.view_height
         self.icon = Image(source=entry.ctg.icon_path, pos_hint={'x':-0.25, 'center_y':0.5},
                           size_hint=(0.7, 0.7))
@@ -184,7 +239,7 @@ class EntryUI(FloatLayout):
                                   size_hint=(0.4, 0.4))
         self.account_text = Label(text=f"{entry.acc.name}",
                               text_size=(int(Config.get('graphics', 'width')), None),
-                              pos_hint={'center_x': 0.67, 'center_y': 0.35},
+                              pos_hint={'center_x': 0.68, 'center_y': 0.35},
                               font_size=15)
         self.amount = Label(text=f"{'-' if entry.mode == False else '+'}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{entry.amount}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
                             text_size=(int(Config.get('graphics', 'width')), None),
@@ -296,6 +351,8 @@ class PopupLayout(FloatLayout):
         self.date_choice = Button(background_color=(66 / 255, 66 / 255, 66 / 255, 1),
                                   text=f"{rs.month_names[(datetime.date.today().month % 12) - 1]}, {rs.disp_year}",
                                   size_hint=(0.935, 0.07), pos_hint={'top': 0.14, 'center_x': 0.5})
+        self.date_popup = Popup(title="Choose a Date:", content=DateSelection(), size_hint=(0.8, 0.5))
+        self.date_choice.bind(on_press=self.open_date_popup)
 
         self.confirm_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.05, 'center_x': 0.5},
                                      text="Confirm")
@@ -321,6 +378,9 @@ class PopupLayout(FloatLayout):
         if value == 'down':
             self.t_mode = True
 
+    def open_date_popup(self, *args):
+        self.date_popup.open()
+
     def callback(self, *args):
         self.account_select.bind(on_select=lambda instance, a: setattr(self, 't_acc', rs.dft_acc[a]))
         self.t_amount = float(self.amount_box.text)
@@ -329,7 +389,11 @@ class PopupLayout(FloatLayout):
         rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc)
         rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
         rs.entry_list.insert(0, EntryUI(rs.temp_entry))
+        rs.temp_acc.update_text()
         self.popup.dismiss()
+
+class DateSelection(FloatLayout):
+    pass #Create a grid to put each date of a calendar object and select from it
 
 class CtgButton(ToggleButton):
     def __init__(self, ctg: rs.Category, **kwargs):
@@ -387,11 +451,15 @@ class BaseApp(App):
 
         main_layout = FloatLayout()
 
-        top_layout = TitleBox(size_hint=(1, 0.08), pos_hint={'top':1})
+        top_layout = TitleBox(size_hint=(1, 0.07), pos_hint={'top':1})
 
-        date_layout = DateBox(size_hint=(1, 0.05), pos_hint={'top':0.92})
+        date_layout = DateBox(size_hint=(1, 0.05), pos_hint={'top':0.93})
 
-        mid_layout = ScrollView(size_hint=(1, 0.73), pos_hint={'top':0.87})
+        acc_layout = AccountBox(size_hint=(1, 0.07), pos_hint={'top':0.88})
+
+        empty_layout = BoxLayout(size_hint=(1, 0.01), pos_hint={'top':0.81})
+
+        mid_layout = ScrollView(size_hint=(1, 0.68), pos_hint={'top':0.80})
         rs.view_height = mid_layout.height
 
         mid_layout_ui = MainInterface(size_hint_y=rs.shown_entries * mid_layout.height / 700)
@@ -401,21 +469,21 @@ class BaseApp(App):
         mid_layout.add_widget(mid_layout_ui)
 
         bottom_button_ly = GridLayout(cols=4, size_hint=(1, 0.09), pos_hint={'top':0.09})
-        bottom_entry_ly = EntryButton(size_hint=(1, 0.05), pos_hint={'top':0.11})
+        bottom_entry_ly = EntryButton(size_hint=(1, 0.01), pos_hint={'top':0.11})
 
         for i in range(1, 5):
             bottom_button_ly.add_widget(Button(background_color=(0, 0.5, 0.5, 1)))
 
         main_layout.add_widget(top_layout)
         main_layout.add_widget(date_layout)
+        main_layout.add_widget(acc_layout)
+        main_layout.add_widget(empty_layout)
         main_layout.add_widget(mid_layout)
         main_layout.add_widget(bottom_button_ly)
         main_layout.add_widget(bottom_entry_ly)
 
         scroll_view_main = mid_layout
         return main_layout
-
-
 
 if __name__ == "__main__":
     BaseApp().run()

@@ -1,8 +1,12 @@
 import datetime
+import calendar
 
 month_names = ["January", "February", "March", "April",
                "May", "June", "July", "August",
                "September", "October", "November", "December"]
+
+current_month = datetime.datetime.today().month
+chosen_date: datetime.date.today()
 
 disp_month = int(datetime.date.today().month) - 1
 disp_year = int(datetime.date.today().year)
@@ -54,11 +58,11 @@ class Entry:
         self.acc.change_value(amount, mode)
         self.date = date
 
-dft_acc = [Account("Cash", "Images/Analytics.png"), Account("Card","Images/Analytics.png"), Account("Savings", "Images/Analytics.png")]
+dft_acc = [Account("Cash", "Images/cash_acc.png"), Account("Card","Images/card_acc.png"), Account("Savings", "Images/Analytics.png")]
 dft_ctg = [Category("Food", "Images/food_ctg.png"), Category("Transport", "Images/transport_ctg.png"),
            Category("Communication", "Images/comms_ctg.png"), Category("Tourism", "Images/tourism_ctg.png"),
-           Category("Clothing", "Images/clothing_ctg.png"), Category("Cleaning", "Images/Analytics.png"),
-           Category("Home", "Images/Analytics.png")]
+           Category("Clothing", "Images/clothing_ctg.png"), Category("Cleaning", "Images/cleaning_ctg.png"),
+           Category("Home", "Images/home_ctg.png")]
 view_height = 0 #Adjusts the main scroll view
 ctg_view_width = 0 #Adjusts the new entry popup scroll view
 dft_currencies = [["€", True], ["$",True], ["TRY",False]] #True if the symbol is to the left, False if it is to the right.
@@ -66,6 +70,7 @@ currency_choice = 0 #The index of the currency above
 temp_ctg = dft_ctg[0] #Passes the value from the child button object to parent object
 temp_entry = None #Passes the value to create it in the main view
 temp_layout = None #Passes the main-layout
+temp_acc = None #Passes the account-box
 entry_list = []
 shown_entries = 10
 
