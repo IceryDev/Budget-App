@@ -6,7 +6,7 @@ month_names = ["January", "February", "March", "April",
                "September", "October", "November", "December"]
 
 current_month = datetime.datetime.today().month
-chosen_date: datetime.date.today()
+chosen_date = datetime.date.today()
 
 disp_month = int(datetime.date.today().month) - 1
 disp_year = int(datetime.date.today().year)

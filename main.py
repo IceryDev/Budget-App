@@ -1,10 +1,12 @@
+import calendar
+import itertools
 import random
 
 import kivy
 from kivy.config import Config
 from kivy.input import MotionEvent
 
-from resources import dft_currencies, currency_choice
+from resources import dft_currencies, currency_choice, chosen_date
 
 Config.set('graphics', 'width', '320')
 Config.set('graphics', 'height', '620')
@@ -393,7 +395,101 @@ class PopupLayout(FloatLayout):
         self.popup.dismiss()
 
 class DateSelection(FloatLayout):
-    pass #Create a grid to put each date of a calendar object and select from it
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.month_calendar = calendar.Calendar()
+        self.displayed_month = rs.current_month
+        self.displayed_year = datetime.date.today().year
+        self.x_positions = itertools.cycle([0.05, 0.2, 0.35, 0.5, 0.65, 0.8, 0.95])
+        self.y_positions = itertools.cycle(reversed([0.25, 0.4, 0.55, 0.7, 0.85]))
+        self.chosen_month_dates = list(self.month_calendar.itermonthdates(chosen_date.year, chosen_date.month))
+
+        self.l_button = Button(size_hint=(None, None),
+                               width=30,
+                               height=30,
+                               pos_hint={'x':0, 'top':0.97},
+                               background_color=(0, 0, 0, 0))
+        self.l_button.bind(on_press=self.l_clicked)
+        self.l_image = Image(source="Images/arrow_left.png")
+        self.l_button.bind(size=partial(self._update_image_pos, self.l_image, self.l_button),
+                           pos=partial(self._update_image_pos, self.l_image, self.l_button))
+        self.l_button.add_widget(self.l_image)
+        self.add_widget(self.l_button)
+
+        self.date_text = Label(text=f"{rs.month_names[self.displayed_month % 12]}, {self.displayed_year}",
+                               pos_hint={'center_x':0.5, 'top':0.97}, size_hint=(None, None), height=30)
+        self.add_widget(self.date_text)
+
+        self.r_button = Button(size_hint=(None, None),
+                               width=30,
+                               height=30,
+                               pos_hint={'x': 0.89, 'top': 0.97},
+                               background_color=(0, 0, 0, 0))
+        self.r_button.bind(on_press=self.r_clicked)
+        self.r_image = Image(source="Images/arrow_right.png")
+        self.r_button.bind(size=partial(self._update_image_pos, self.r_image, self.r_button),
+                           pos=partial(self._update_image_pos, self.r_image, self.r_button))
+        self.r_button.add_widget(self.r_image)
+        self.add_widget(self.r_button)
+
+        temp_y_pos = next(self.y_positions)
+        temp_x_pos = next(self.x_positions)
+        for a in range(5):
+            for b in range(7):
+                temp_button = DateButton(self.chosen_month_dates[7*a+b],
+                                           pos_hint={'top': temp_y_pos, 'center_x': temp_x_pos},
+                                           group="date", size_hint=(0.1, 0.1),
+                                           text=str(self.chosen_month_dates[7*a+b].day),
+                                           background_color=(0, 0, 0, 0))
+                if self.chosen_month_dates[7].month == self.chosen_month_dates[7*a+b].month:
+                    temp_button.category = "e"
+                elif self.chosen_month_dates[7].month > self.chosen_month_dates[7*a+b].month:
+                    temp_button.category = "b"
+                    temp_button.color = (1, 1, 1, 100/255)
+                else:
+                    temp_button.category = "a"
+                    temp_button.color = (1, 1, 1, 100/255)
+                self.add_widget(temp_button)
+                temp_x_pos = next(self.x_positions)
+            temp_y_pos = next(self.y_positions)
+
+    @staticmethod
+    def _update_image_pos(img, button, *args):
+        img.size = button.size
+        img.pos = button.pos
+
+    def l_clicked(self, *args):
+        self.displayed_month = (self.displayed_month - 1)
+        self.displayed_year = int(datetime.date.today().year) + (self.displayed_month // 12)
+        self._update_text()
+
+    def r_clicked(self, *args):
+        self.displayed_month = (self.displayed_month + 1)
+        self.displayed_year = int(datetime.date.today().year) + (self.displayed_month // 12)
+        self._update_text()
+
+    def _update_text(self):
+        self.date_text.text = f"{rs.month_names[self.displayed_month % 12]}, {self.displayed_year}"
+
+
+class DateButton(ToggleButton):
+    def __init__(self, date: datetime.date, **kwargs):
+        super().__init__(**kwargs)
+        self.date = date
+        self.category = "e" # b, e, a for before, exact and after
+        self.bind(state=self._state_change)
+        self.background_down = 'white'
+
+    def _state_change(self, instance, value):
+        if value == 'down':
+            match self.category:
+                case "e":
+                    self.background_color = (100 / 255, 100 / 255, 100 / 255, 1)
+                case _:
+                    pass
+        else:
+            self.background_color = (0, 0, 0, 0)
+
 
 class CtgButton(ToggleButton):
     def __init__(self, ctg: rs.Category, **kwargs):

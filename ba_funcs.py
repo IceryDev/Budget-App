@@ -23,3 +23,4 @@ def sign_setter(value1: float, seperator: float = 0.0,
     if value1 > seperator: return dft_more
     elif value1 < seperator: return dft_less
     else: return dft_exact
+
