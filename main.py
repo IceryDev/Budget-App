@@ -399,10 +399,14 @@ class DateSelection(FloatLayout):
         super().__init__(**kwargs)
         self.month_calendar = calendar.Calendar()
         self.displayed_month = rs.current_month
+        self.is_updating = False
+        rs.temp_date_select = self
         self.displayed_year = datetime.date.today().year
         self.x_positions = itertools.cycle([0.05, 0.2, 0.35, 0.5, 0.65, 0.8, 0.95])
         self.y_positions = itertools.cycle(reversed([0.25, 0.4, 0.55, 0.7, 0.85]))
-        self.chosen_month_dates = list(self.month_calendar.itermonthdates(chosen_date.year, chosen_date.month))
+        self.y_positions_6wk = itertools.cycle(reversed([0.25, 0.37, 0.49, 0.61, 0.73, 0.85]))
+        self.chosen_month_dates = list(self.month_calendar.itermonthdates(self.displayed_year, self.displayed_month))
+        self.chosen_date = datetime.date.today()
 
         self.l_button = Button(size_hint=(None, None),
                                width=30,
@@ -416,7 +420,7 @@ class DateSelection(FloatLayout):
         self.l_button.add_widget(self.l_image)
         self.add_widget(self.l_button)
 
-        self.date_text = Label(text=f"{rs.month_names[self.displayed_month % 12]}, {self.displayed_year}",
+        self.date_text = Label(text=f"{rs.month_names[self.displayed_month % 12 - 1]}, {self.displayed_year}",
                                pos_hint={'center_x':0.5, 'top':0.97}, size_hint=(None, None), height=30)
         self.add_widget(self.date_text)
 
@@ -432,12 +436,56 @@ class DateSelection(FloatLayout):
         self.r_button.add_widget(self.r_image)
         self.add_widget(self.r_button)
 
-        temp_y_pos = next(self.y_positions)
-        temp_x_pos = next(self.x_positions)
-        for a in range(5):
+        self.temp_y_pos = next(self.y_positions)
+        self.temp_y_pos_6wk = next(self.y_positions_6wk)
+        self.temp_x_pos = next(self.x_positions)
+        self.temp_buttons = []
+
+        if self.chosen_month_dates.__len__() // 6:
+            self._create_buttons(False)
+        else: self._create_buttons(True)
+
+
+    @staticmethod
+    def _update_image_pos(img, button, *args):
+        img.size = button.size
+        img.pos = button.pos
+
+    def l_clicked(self, *args):
+        self.displayed_month = (self.displayed_month - 1)
+        self.displayed_year = int(datetime.date.today().year) + ((self.displayed_month - 1) // 12)
+        print(f"{self.displayed_year}, {self.displayed_month}")
+        self._update_text()
+
+    def r_clicked(self, *args):
+        self.displayed_month = (self.displayed_month + 1)
+        self.displayed_year = int(datetime.date.today().year) + ((self.displayed_month - 1) // 12)
+        print(f"{self.displayed_year}, {self.displayed_month}")
+        self._update_text()
+
+    def _update_text(self):
+        if self.is_updating: return
+
+        self.is_updating = True
+        self.chosen_month_dates = list(self.month_calendar.itermonthdates(self.displayed_year, self.displayed_month % 12 if self.displayed_month % 12 != 0 else 12))
+        self.date_text.text = f"{rs.month_names[self.displayed_month % 12 - 1]}, {self.displayed_year}"
+        for x in range(self.temp_buttons.__len__()):
+            self.remove_widget(self.temp_buttons[x])
+        self.temp_buttons.clear()
+
+        if self.chosen_month_dates.__len__() == 42:
+            self._create_buttons(False)
+        else: self._create_buttons(True)
+
+
+        self.do_layout()
+        self.is_updating = False
+
+    def _create_buttons(self, mode):
+        for a in range(5 if mode else 6):
             for b in range(7):
                 temp_button = DateButton(self.chosen_month_dates[7*a+b],
-                                           pos_hint={'top': temp_y_pos, 'center_x': temp_x_pos},
+                                           pos_hint={'top': self.temp_y_pos if mode else self.temp_y_pos_6wk, 'center_x': self.temp_x_pos},
                                            group="date", size_hint=(0.1, 0.1),
                                            text=str(self.chosen_month_dates[7*a+b].day),
                                            background_color=(0, 0, 0, 0))
@@ -449,28 +497,14 @@ class DateSelection(FloatLayout):
                 else:
                     temp_button.category = "a"
                     temp_button.color = (1, 1, 1, 100/255)
+
+                if self.chosen_month_dates[7*a+b] == self.chosen_date:
+                    temp_button.state = "down"
                 self.add_widget(temp_button)
-                temp_x_pos = next(self.x_positions)
-            temp_y_pos = next(self.y_positions)
-
-    @staticmethod
-    def _update_image_pos(img, button, *args):
-        img.size = button.size
-        img.pos = button.pos
-
-    def l_clicked(self, *args):
-        self.displayed_month = (self.displayed_month - 1)
-        self.displayed_year = int(datetime.date.today().year) + (self.displayed_month // 12)
-        self._update_text()
-
-    def r_clicked(self, *args):
-        self.displayed_month = (self.displayed_month + 1)
-        self.displayed_year = int(datetime.date.today().year) + (self.displayed_month // 12)
-        self._update_text()
-
-    def _update_text(self):
-        self.date_text.text = f"{rs.month_names[self.displayed_month % 12]}, {self.displayed_year}"
-
+                self.temp_x_pos = next(self.x_positions)
+                self.temp_buttons.append(temp_button)
+            if mode: self.temp_y_pos = next(self.y_positions)
+            else: self.temp_y_pos_6wk = next(self.y_positions_6wk)
 
 class DateButton(ToggleButton):
     def __init__(self, date: datetime.date, **kwargs):
@@ -485,11 +519,15 @@ class DateButton(ToggleButton):
             match self.category:
                 case "e":
                     self.background_color = (100 / 255, 100 / 255, 100 / 255, 1)
+                    rs.temp_date_select.chosen_date = self.date
+                case "b":
+                    rs.temp_date_select.l_clicked()
+                case "a":
+                    rs.temp_date_select.r_clicked()
                 case _:
                     pass
         else:
             self.background_color = (0, 0, 0, 0)
-
 
 class CtgButton(ToggleButton):
     def __init__(self, ctg: rs.Category, **kwargs):

@@ -71,6 +71,7 @@ temp_ctg = dft_ctg[0] #Passes the value from the child button object to parent o
 temp_entry = None #Passes the value to create it in the main view
 temp_layout = None #Passes the main-layout
 temp_acc = None #Passes the account-box
+temp_date_select = None #Passes the date selection UI
 entry_list = []
 shown_entries = 10
 
