@@ -195,13 +195,7 @@ class MainInterface(GridLayout):
         self.child_count = 0
         self.is_updating = False
 
-        for x in range(10):
-            temp = EntryUI(rs.Entry(rs.dft_ctg[random.randint(0, 6)], 10.00, rs.dft_acc[random.randint(0, 2)], True))
-            rs.entry_list.append(temp)
-            self.add_widget(temp, True)
-            rs.shown_entries += 1
 
-        self.on_child_change(self, None)
 
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().add_widget(widget, *args, **kwargs)
@@ -219,11 +213,31 @@ class MainInterface(GridLayout):
         if self.is_updating: return
 
         self.is_updating = True
+        self.check_dates(self.children[0].entry)
         self.child_count = len(self.children)
         self.size_hint_y = self.child_count * rs.view_height / 700
-        self.children = self.children[1:] + [self.children[0]]
         self.do_layout()
         self.is_updating = False
+
+    def check_dates(self, added_entry: rs.Entry, *args):
+        if len(self.children) == 1: #The first case is important as otherwise we would get an index error.
+            self.add_widget(DateEntryUI(added_entry), True)
+            self.children = [self.children[1]] + [self.children[0]]
+            return
+        
+        if added_entry.date < self.children[1].entry.date: #Add to end with older dates
+            self.add_widget(DateEntryUI(added_entry), True)
+            self.children = [self.children[1]] + [self.children[0]] + self.children[2:]
+        elif self.children[-1].entry.date >= added_entry.date >= self.children[0].entry.date: #Existing dates
+            for x in reversed(range((self.children.__len__()))):
+                if added_entry.date == self.children[x].entry.date:
+                    self.children = self.children[1:x] + [self.children[0]] + self.children[x:]
+                    break
+        elif self.children[-1].entry.date < added_entry.date: #Add to beginning
+            self.add_widget(DateEntryUI(added_entry), True)
+            self.children = self.children[2:] + [self.children[1]] + [self.children[0]]
+        else:
+            raise rs.IndexMissingError(f"An index that is being used is not defined. This may cause problems.")
 
 class EntryUI(FloatLayout):
     def __init__(self, entry: rs.Entry, **kwargs):
@@ -255,6 +269,19 @@ class EntryUI(FloatLayout):
         self.add_widget(self.account_icon)
         self.add_widget(self.account_text)
         self.add_widget(self.amount)
+        self.add_widget(self.bar)
+
+class DateEntryUI(FloatLayout):
+    def __init__(self, entry: rs.Entry, **kwargs):
+        super().__init__(**kwargs)
+        self.entry = entry
+
+        self.height = rs.view_height
+        self.bar = Image(pos_hint={'x': 0.03, 'center_y': 0.11},
+                         size_hint=(0.94, 0.02), color=(1, 1, 1, 1))
+
+        self.add_widget(Label(text=entry.date.strftime("%b %d, %A"), pos_hint={'center_x':0.44, 'center_y':0.32},
+                              halign='left', text_size=(int(Config.get('graphics', 'width')), None)))
         self.add_widget(self.bar)
 
 class EntryButton(FloatLayout):
@@ -351,9 +378,10 @@ class PopupLayout(FloatLayout):
                                     padding_x=(10, 10))
 
         self.date_choice = Button(background_color=(66 / 255, 66 / 255, 66 / 255, 1),
-                                  text=f"{rs.month_names[(datetime.date.today().month % 12) - 1]}, {rs.disp_year}",
+                                  text=f"{rs.month_names[(datetime.date.today().month % 12) - 1]} {datetime.date.today().day}, {rs.disp_year}",
                                   size_hint=(0.935, 0.07), pos_hint={'top': 0.14, 'center_x': 0.5})
         self.date_popup = Popup(title="Choose a Date:", content=DateSelection(), size_hint=(0.8, 0.5))
+        self.date_popup.content.popup = self.date_popup
         self.date_choice.bind(on_press=self.open_date_popup)
 
         self.confirm_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.05, 'center_x': 0.5},
@@ -381,6 +409,7 @@ class PopupLayout(FloatLayout):
             self.t_mode = True
 
     def open_date_popup(self, *args):
+        self.date_popup.content.parent_layout = self
         self.date_popup.open()
 
     def callback(self, *args):
@@ -388,7 +417,7 @@ class PopupLayout(FloatLayout):
         self.t_amount = float(self.amount_box.text)
         self.t_desc = self.desc_box.text
         self.t_ctg = rs.temp_ctg
-        rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc)
+        rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc, rs.chosen_date)
         rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
         rs.entry_list.insert(0, EntryUI(rs.temp_entry))
         rs.temp_acc.update_text()
@@ -400,6 +429,8 @@ class DateSelection(FloatLayout):
         self.month_calendar = calendar.Calendar()
         self.displayed_month = rs.current_month
         self.is_updating = False
+        self.popup = Popup()
+        self.parent_layout = None
         rs.temp_date_select = self
         self.displayed_year = datetime.date.today().year
         self.x_positions = itertools.cycle([0.05, 0.2, 0.35, 0.5, 0.65, 0.8, 0.95])
@@ -445,11 +476,21 @@ class DateSelection(FloatLayout):
             self._create_buttons(False)
         else: self._create_buttons(True)
 
+        self.confirm_button = Button(pos_hint={'top':0.1, 'center_x':0.5}, size_hint=(None, None),
+                                     width=120, height=30, text="Confirm")
+        self.confirm_button.bind(on_press=self.callback)
+        self.add_widget(self.confirm_button)
+
 
     @staticmethod
     def _update_image_pos(img, button, *args):
         img.size = button.size
         img.pos = button.pos
+
+    def callback(self, *args):
+        rs.chosen_date = self.chosen_date
+        self.parent_layout.date_choice.text = f"{rs.month_names[self.chosen_date.month % 12 - 1]} {self.chosen_date.day}, {self.chosen_date.year}"
+        self.popup.dismiss()
 
     def l_clicked(self, *args):
         self.displayed_month = (self.displayed_month - 1)

@@ -75,7 +75,10 @@ temp_date_select = None #Passes the date selection UI
 entry_list = []
 shown_entries = 10
 
-
 class PlaceDoesNotExistError(Exception):
     #See ba_funcs, align_currency_text
+    pass
+
+class IndexMissingError(Exception):
+    #See main, MainInterface, check_dates
     pass
