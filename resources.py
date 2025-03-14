@@ -57,12 +57,14 @@ class Entry:
         self.description = description
         self.acc.change_value(amount, mode)
         self.date = date
+        if self.mode: self.ctg = income_ctg
 
 dft_acc = [Account("Cash", "Images/cash_acc.png"), Account("Card","Images/card_acc.png"), Account("Savings", "Images/Analytics.png")]
 dft_ctg = [Category("Food", "Images/food_ctg.png"), Category("Transport", "Images/transport_ctg.png"),
            Category("Communication", "Images/comms_ctg.png"), Category("Tourism", "Images/tourism_ctg.png"),
            Category("Clothing", "Images/clothing_ctg.png"), Category("Cleaning", "Images/cleaning_ctg.png"),
            Category("Home", "Images/home_ctg.png")]
+income_ctg = Category("Income", "Images/Analytics.png")
 view_height = 0 #Adjusts the main scroll view
 ctg_view_width = 0 #Adjusts the new entry popup scroll view
 dft_currencies = [["€", True], ["$",True], ["TRY",False]] #True if the symbol is to the left, False if it is to the right.

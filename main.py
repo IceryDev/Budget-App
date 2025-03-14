@@ -1,12 +1,13 @@
 import calendar
 import itertools
 import random
+import math
 
 import kivy
 from kivy.config import Config
 from kivy.input import MotionEvent
 
-from resources import dft_currencies, currency_choice, chosen_date
+from resources import dft_currencies, currency_choice, chosen_date, dft_acc
 
 Config.set('graphics', 'width', '320')
 Config.set('graphics', 'height', '620')
@@ -321,6 +322,9 @@ class PopupLayout(FloatLayout):
         self.amount_text = Label(text="Amount:", size_hint=(1, 0.1),
                                  halign="left", pos_hint={'top':1.05, 'x':0.035},
                                  font_size=17)
+        self.error_text = Label(text="Please enter a valid amount!", size_hint=(0.5, 0.1),
+                                 halign="center", pos_hint={'top': 1.02, 'x': 0.4},
+                                 font_size=17, color=(1, 0.2, 0.2, 0))
         self.amount_text.bind(size=self.amount_text.setter('text_size'))
 
         self.amount_box= TextInput(size_hint=(0.935, 0.1), pos_hint={'top':0.94, 'x':0.035},
@@ -329,6 +333,7 @@ class PopupLayout(FloatLayout):
                                    background_color=(22/255, 22/255, 22/255, 1),
                                    cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
                                    padding_x=(10, 10), text="0")
+        self.amount_box.bind(focus=self.on_focus)
         self.currency_text = Label(text=rs.dft_currencies[rs.currency_choice][0], size_hint=(0.1, 0.1),
                                    pos_hint={'top':0.94, 'x':baf.align_currency_text(rs.dft_currencies[rs.currency_choice][1], place='text_box')},
                                    font_size=17)
@@ -345,9 +350,10 @@ class PopupLayout(FloatLayout):
 
         self.account_select = DropDown()
         for i in range(rs.dft_acc.__len__()):
-            self.account_choice = NumericalButton(text=rs.dft_acc[i].name, size_hint_y=None, height=20, no=i)
+            self.account_ui = AccountUI(i, size_hint_y=None, height=40)
+            self.account_choice = self.account_ui.button
             self.account_choice.bind(on_release=lambda a: self.account_select.select(a.no))
-            self.account_select.add_widget(self.account_choice)
+            self.account_select.add_widget(self.account_ui)
         self.account_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.75, 'center_x': 0.5},
                                      text="Cash")
         self.account_button.bind(on_press=self.account_select.open)
@@ -361,6 +367,8 @@ class PopupLayout(FloatLayout):
         self.ctg_scroll = ScrollView(do_scroll_x=True,
                                      do_scroll_y=False, size_hint=(0.935, 0.18),
                                      pos_hint={'top': 0.59, 'x':0.035})
+        self.ctg_cover = Image(size_hint=(0.935, 0.18),
+                               pos_hint={'top': 0.59, 'x': 0.035}, color=(0.2, 0.2, 0.2, 0))
 
         self.ctg_scroll_ui = CtgSelector(size_hint_x=self.ctg_scroll.width/(rs.dft_ctg.__len__()**2))
         self.ctg_scroll_ui.bind(minimum_width=self.ctg_scroll_ui.setter('width'))
@@ -389,6 +397,7 @@ class PopupLayout(FloatLayout):
         self.confirm_button.bind(on_press=self.callback)
 
         self.add_widget(self.amount_text)
+        self.add_widget(self.error_text)
         self.add_widget(self.amount_box)
         self.add_widget(self.currency_text)
         self.add_widget(self.transaction_choice)
@@ -399,29 +408,44 @@ class PopupLayout(FloatLayout):
         self.add_widget(self.desc_box)
         self.add_widget(self.date_choice)
         self.add_widget(self.confirm_button)
+        self.add_widget(self.ctg_cover)
 
     def expense(self, instance, value):
         if value == 'down':
             self.t_mode = False
+            self.ctg_cover.color = (0.2, 0.2, 0.2, 0)
 
     def deposit(self, instance, value):
         if value == 'down':
             self.t_mode = True
+            self.ctg_cover.color = (0.2, 0.2, 0.2, 0.9)
 
     def open_date_popup(self, *args):
         self.date_popup.content.parent_layout = self
         self.date_popup.open()
 
+    def on_focus(self, instance, value):
+        if value:
+            self.amount_box.foreground_color = (1, 1, 1, 1)
+
     def callback(self, *args):
-        self.account_select.bind(on_select=lambda instance, a: setattr(self, 't_acc', rs.dft_acc[a]))
-        self.t_amount = float(self.amount_box.text)
-        self.t_desc = self.desc_box.text
-        self.t_ctg = rs.temp_ctg
-        rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc, rs.chosen_date)
-        rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
-        rs.entry_list.insert(0, EntryUI(rs.temp_entry))
-        rs.temp_acc.update_text()
-        self.popup.dismiss()
+        try:
+            self.t_amount = float(self.amount_box.text)
+            if self.t_amount <= 0 or str(self.t_amount).rsplit(".")[1].__len__() > 2: raise ValueError
+            self.account_select.bind(on_select=lambda instance, a: setattr(self, 't_acc', rs.dft_acc[a]))
+            self.t_desc = self.desc_box.text
+            self.t_ctg = rs.temp_ctg
+            rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc, rs.chosen_date)
+            rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
+            rs.entry_list.insert(0, EntryUI(rs.temp_entry))
+            rs.temp_acc.update_text()
+            for item in self.account_select.children:
+                for item_2 in item.children:
+                    item_2.update_text() #All this does is update the text of the accounts in dropdown
+            self.popup.dismiss()
+        except ValueError:
+            self.amount_box.foreground_color = (1, 0.2, 0.2, 1)
+            self.error_text.color = (1, 0.2, 0.2, 1)
 
 class DateSelection(FloatLayout):
     def __init__(self, **kwargs):
@@ -578,12 +602,21 @@ class CtgButton(ToggleButton):
         self.background_down = 'white'
 
         self.img = Image(source=self.ctg.icon_path)
+        self.name = Label(text=self.ctg.name, font_size=14)
         self.bind(size=self._update_image_pos, pos=self._update_image_pos, state=self._state_change)
         self.add_widget(self.img)
+        self.add_widget(self.name)
 
     def _update_image_pos(self, *args):
         self.img.size = self.size
         self.img.pos = self.pos
+        self.img.width *= 8/9
+        self.img.height *= 8/9
+        self.img.y += 13
+        self.img.x += 5
+        self.name.pos = self.pos
+        self.name.y -= 40
+        self.name.x -= 5
 
     def _state_change(self, instance, value):
         if value == 'down':
@@ -618,6 +651,34 @@ class NumericalButton(Button):
     def __init__(self, no: int, **kwargs):
         super().__init__(**kwargs)
         self.no = no
+
+class AccountUI(FloatLayout):
+    amount = NumericProperty(0.0)
+    def __init__(self, no: int, **kwargs):
+        super().__init__(**kwargs)
+        self.no = no
+        self.amount = rs.dft_acc[self.no].value
+        self.float_amount = 0.0
+        self.background = Image(color=(22/255, 22/255, 22/255, 1), size_hint=(1,1), pos_hint={'top':1})
+        self.button = NumericalButton(text=rs.dft_acc[no].name, size_hint_y=None, height=40, no=no,
+                                      background_color=(0, 0, 0, 0), pos_hint={'top':1})
+        self.icon = Image(source=rs.dft_acc[no].icon_path, pos_hint={'top':1, 'x':-0.4})
+        self.balance_int = Label(
+            text=f"{baf.sign_setter(rs.dft_acc[no].value)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(rs.dft_acc[no].value)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+            pos_hint={'top': 1.245, 'center_x':0.8},
+            color=baf.color_setter(rs.dft_acc[no].value),
+            size_hint_x=1, halign='right', text_size=self.size)
+        self.bind(amount=self.update_text)
+        self.add_widget(self.background)
+        self.add_widget(self.button)
+        self.add_widget(self.icon)
+        self.add_widget(self.balance_int)
+
+    def update_text(self, *args):
+        self.amount = rs.dft_acc[self.no].value
+        self.float_amount = self.amount
+        self.balance_int.text = f"{baf.sign_setter(self.float_amount)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.float_amount)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.balance_int.color = baf.color_setter(self.float_amount)
 
 class BaseApp(App):
     def build(self):
