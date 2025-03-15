@@ -80,6 +80,7 @@ class TitleBox(BoxLayout):
 class DateBox(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        rs.temp_date_box = self
 
         with self.canvas.before:
             Color(0, 116/255, 129/255, 63/100)
@@ -125,18 +126,31 @@ class DateBox(BoxLayout):
         img.pos = button.pos
 
     def _update_text(self):
-        print(f"self.month_text: {self.month_text.text}, disp_month: {rs.disp_year}, {rs.disp_month}, {rs.disp_month // 12} type: {type(self.month_text)}")
+        #print(f"self.month_text: {self.month_text.text}, disp_month: {rs.disp_year}, {rs.disp_month}, {rs.disp_month // 12} type: {type(self.month_text)}")
         self.month_text.text = f"{rs.month_names[rs.disp_month % 12]}, {rs.disp_year}"
 
     def lft_clicked(self, *args):
         rs.disp_month = (rs.disp_month - 1)
         rs.disp_year = int(datetime.date.today().year) + (rs.disp_month // 12)
+        self.change_children()
         self._update_text()
 
     def rgt_clicked(self, *args):
         rs.disp_month = (rs.disp_month + 1)
         rs.disp_year = int(datetime.date.today().year) + (rs.disp_month // 12)
+        self.change_children()
         self._update_text()
+
+    @staticmethod
+    def change_children(*args):
+        rs.entry_list.clear()
+        if rs.entry_groups.get(baf.rtrn_disp()) is not None:
+            for item in rs.entry_groups.get(baf.rtrn_disp()).entries: rs.entry_list.append(item)
+        rs.temp_layout.is_updating = True
+        rs.temp_layout.clear_widgets()
+        rs.temp_layout.is_updating = False
+        for item in reversed(rs.entry_list):
+            rs.temp_layout.add_widget(item)
 
 class AccountBox(FloatLayout):
     balance = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
@@ -196,8 +210,6 @@ class MainInterface(GridLayout):
         self.child_count = 0
         self.is_updating = False
 
-
-
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().add_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
@@ -240,6 +252,12 @@ class MainInterface(GridLayout):
         else:
             raise rs.IndexMissingError(f"An index that is being used is not defined. This may cause problems.")
 
+    @staticmethod
+    def open_info_popup(entry: rs.Entry, entry_ui, *args):
+        temp_popup = Popup(title="Entry Info", content=EntryInfoPopup(entry, entry_ui), size_hint=(0.8, 0.5))
+        rs.temp_popup = temp_popup
+        temp_popup.open()
+
 class EntryUI(FloatLayout):
     def __init__(self, entry: rs.Entry, **kwargs):
         super().__init__(**kwargs)
@@ -265,12 +283,148 @@ class EntryUI(FloatLayout):
                             font_size=22)
         self.bar = Image(pos_hint={'x': 0.2, 'center_y': 0.1},
                          size_hint=(0.75, 0.02), color=(88/255, 88/255, 88/255, 1))
+        self.overlay_button = Button(background_color=(0, 0, 0, 0))
+        self.overlay_button.bind(on_press=self.show_info, pos=self.update_pos, size=self.update_pos)
         self.add_widget(self.icon)
         self.add_widget(self.category)
         self.add_widget(self.account_icon)
         self.add_widget(self.account_text)
         self.add_widget(self.amount)
         self.add_widget(self.bar)
+        self.add_widget(self.overlay_button)
+
+    def show_info(self, *args):
+        rs.temp_layout.open_info_popup(self.entry, self)
+
+    def update_pos(self, *args):
+        self.overlay_button.pos = self.pos
+        self.overlay_button.size = self.size
+
+class EntryInfoPopup(FloatLayout):
+    def __init__(self, entry: rs.Entry, entry_ui, **kwargs):
+        super().__init__(**kwargs)
+        self.entry = entry
+        self.entry_ui = entry_ui
+        self.a = 0.2 if not self.entry.mode else 0.8
+        self.b = 0.8 if not self.entry.mode else 0.2
+
+        self.banner = Image(color=baf.color_setter(1 if self.entry.mode else -1, dft_less=(141 / 255, 10 / 255, 10 / 255, 1)),
+                            pos_hint={'center_x':0.5, 'top':1.18},
+                            size_hint=(1.055, None), height=80)
+        self.title = Label(text="Expense" if not self.entry.mode else "Income", pos_hint={'center_x':0.5, 'top':1.25},
+                           size_hint=(1, None), width=self.width,
+                           font_size=24)
+        self.acc_icon = Image(source=self.entry.acc.icon_path,
+                              size_hint=(None, None), width=70,
+                              height=70, pos_hint={'center_x':self.a, 'top':0.8})
+        self.ctg_icon = Image(source=self.entry.ctg.icon_path,
+                              size_hint=(None, None), width=70,
+                              height=70, pos_hint={'center_x': self.b, 'top': 0.8})
+        self.a1 = Image(source="Images/arrow_right.png",
+                              size_hint=(None, None), width=50,
+                              height=50, pos_hint={'center_x':0.47, 'top':0.77})
+        self.a2 = Image(source="Images/arrow_right.png",
+                        size_hint=(None, None), width=50,
+                        height=50, pos_hint={'center_x': 0.56, 'top': 0.77})
+        self.amount_text = Label(text=f"{'-' if entry.mode == False else '+'}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{entry.amount}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                                 pos_hint={'center_x': 0.5, 'top': 1},
+                                 size_hint=(1, None), width=self.width,
+                                 color=(191/255, 30/255, 30/255, 1) if entry.mode == False else (127/255, 199/255, 127/255, 1),
+                                 font_size=24)
+        self.acc_text = Label(text=self.entry.acc.name,
+                              pos_hint={'center_x': self.a, 'top': 0.7},
+                              size_hint=(1, None), width=50)
+        self.ctg_text = Label(text=self.entry.ctg.name,
+                              pos_hint={'center_x': self.b, 'top': 0.7},
+                              size_hint=(1, None), width=50)
+        self.desc_text = Label(text="Description",
+                              pos_hint={'center_x': 0.5, 'top': 0.62},
+                              size_hint=(1, None), width=50)
+        self.desc_box = FloatLayout(size_hint=(1, None),
+                             height=120, pos_hint={'center_x': 0.5, 'top': 0.4})
+        self.desc_bg = Image(size_hint=(1, 1),
+                             pos_hint={'center_x': 0.5, 'center_y':0.5},
+                             color=(22/255, 22/255, 22/255, 1))
+        self.desc_box.add_widget(self.desc_bg)
+
+        self.desc = Label(text="", pos_hint={'center_x': 0.5, 'center_y':0.46},
+                          size_hint=(1, None), height=100,
+                          text_size=(250, None))
+        self.fix_lines()
+
+        self.confirm_popup = Popup(title="Are you sure?", content=ConfirmPopup(self.del_entry), size_hint=(0.6, 0.3))
+        rs.mini_popup = self.confirm_popup
+        self.delete_entry = Button(size_hint=(None, None), width=45,  # Resume here, after removing fix the amounts in the accounts.
+                                   height=45, pos_hint={'center_x': 0.9, 'top': 1.15},
+                                   background_color=(0, 0, 0, 0))
+        self.delete_img = Image(source="Images/delete_entry.png", color=(1, 1, 1, 0.5))
+        self.delete_entry.bind(size=self._update_img, pos=self._update_img, on_press=lambda instance: self.confirm_popup.open())
+        self.delete_entry.add_widget(self.delete_img)
+
+        self.edit_entry = Button(size_hint=(None, None), width=65,
+                                   height=65, pos_hint={'center_x': 0.1, 'top': 1.175},
+                                   background_color=(0, 0, 0, 0))
+        self.edit_img = Image(source="Images/edit_entry.png", color=(1, 1, 1, 0.5))
+        self.edit_entry.bind(size=self._update_img, pos=self._update_img)
+        self.edit_entry.add_widget(self.edit_img)
+
+        self.desc_box.add_widget(self.desc)
+
+        self.add_widget(self.banner)
+        self.add_widget(self.title)
+        self.add_widget(self.acc_icon)
+        self.add_widget(self.a1)
+        self.add_widget(self.a2)
+        self.add_widget(self.ctg_icon)
+        self.add_widget(self.amount_text)
+        self.add_widget(self.acc_text)
+
+        self.add_widget(self.ctg_text)
+        self.add_widget(self.desc_box)
+        self.add_widget(self.desc_text)
+        self.add_widget(self.delete_entry)
+        self.add_widget(self.edit_entry)
+
+    def _update_img(self, *args):
+        self.delete_img.pos = self.delete_entry.pos
+        self.delete_img.size = self.delete_entry.size
+        self.edit_img.pos = self.edit_entry.pos
+        self.edit_img.size = self.edit_entry.size
+
+    def del_entry(self, mini_popup, *args):
+        rs.entry_groups[baf.rtrn_disp()].entries.remove(self.entry_ui)
+        rs.temp_date_box.change_children()
+        rs.temp_popup.dismiss()
+        rs.mini_popup.dismiss()
+
+    def fix_lines(self, *args):
+        switch = True
+        temp = ''
+        line_count = (self.desc.texture_size[1] / self.desc.line_height) / 22
+        self.desc.text = temp
+        self.desc.texture_update()
+        for x in range(self.entry.description.__len__()):
+            temp = temp + self.entry.description[x]
+            self.desc.text = temp
+            line_count = (self.desc.texture_size[1] / self.desc.line_height) / 22
+            self.desc.texture_update()
+            if line_count > 4:
+                switch = False
+                break
+        if not switch:
+            temp = temp[:temp.__len__() - 4] + "..."
+        self.desc.text_size = (250, 100)
+        self.desc.valign = 'top'
+        self.desc.text = temp
+        self.desc.texture_update()
+
+class ConfirmPopup(FloatLayout):
+    def __init__(self, func, **kwargs):
+        super().__init__(**kwargs)
+        self.button = Button(text="Confirm", size_hint=(1, None), height=25,
+                             pos_hint={'center_x':0.5, 'top':0.2})
+        self.button.bind(on_press=func)
+        self.add_widget(self.button)
 
 class DateEntryUI(FloatLayout):
     def __init__(self, entry: rs.Entry, **kwargs):
@@ -429,6 +583,7 @@ class PopupLayout(FloatLayout):
             self.amount_box.foreground_color = (1, 1, 1, 1)
 
     def callback(self, *args):
+        temp_date = datetime.date(rs.chosen_date.year, rs.chosen_date.month, 1)
         try:
             self.t_amount = float(self.amount_box.text)
             if self.t_amount <= 0 or str(self.t_amount).rsplit(".")[1].__len__() > 2: raise ValueError
@@ -436,13 +591,26 @@ class PopupLayout(FloatLayout):
             self.t_desc = self.desc_box.text
             self.t_ctg = rs.temp_ctg
             rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc, rs.chosen_date)
-            rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
-            rs.entry_list.insert(0, EntryUI(rs.temp_entry))
+
+            if baf.rtrn_disp() == temp_date:
+                rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
+                rs.entry_list.insert(0, EntryUI(rs.temp_entry))
+                if rs.entry_groups.get(baf.rtrn_disp()) is None:
+                    rs.entry_groups[baf.rtrn_disp()] = rs.EntryGroup(baf.rtrn_disp())
+                rs.entry_groups[baf.rtrn_disp()].entries.insert(0, EntryUI(rs.temp_entry))
+            else:
+                if rs.entry_groups.get(temp_date) is None:
+                    rs.entry_groups[temp_date] = rs.EntryGroup(temp_date)
+                rs.entry_groups[temp_date].entries.insert(0, EntryUI(rs.temp_entry))
+
+            rs.temp_date_box.change_children()
             rs.temp_acc.update_text()
+
             for item in self.account_select.children:
                 for item_2 in item.children:
                     item_2.update_text() #All this does is update the text of the accounts in dropdown
             self.popup.dismiss()
+
         except ValueError:
             self.amount_box.foreground_color = (1, 0.2, 0.2, 1)
             self.error_text.color = (1, 0.2, 0.2, 1)
@@ -519,13 +687,11 @@ class DateSelection(FloatLayout):
     def l_clicked(self, *args):
         self.displayed_month = (self.displayed_month - 1)
         self.displayed_year = int(datetime.date.today().year) + ((self.displayed_month - 1) // 12)
-        print(f"{self.displayed_year}, {self.displayed_month}")
         self._update_text()
 
     def r_clicked(self, *args):
         self.displayed_month = (self.displayed_month + 1)
         self.displayed_year = int(datetime.date.today().year) + ((self.displayed_month - 1) // 12)
-        print(f"{self.displayed_year}, {self.displayed_month}")
         self._update_text()
 
     def _update_text(self):

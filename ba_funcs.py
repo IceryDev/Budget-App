@@ -1,5 +1,6 @@
 import resources
 import calendar
+import datetime
 
 def align_currency_text(alignment: bool, place: str): #True if the symbol is to the left, False if it is to the right.
     match place:
@@ -23,4 +24,7 @@ def sign_setter(value1: float, seperator: float = 0.0,
     if value1 > seperator: return dft_more
     elif value1 < seperator: return dft_less
     else: return dft_exact
+
+def rtrn_disp(): #Return displayed month
+    return datetime.date(resources.disp_year, resources.disp_month % 12 + 1, 1)
 
