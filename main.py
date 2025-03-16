@@ -416,9 +416,6 @@ class EntryInfoPopup(FloatLayout):
         entry_popup.content.date_choice.text = f"{rs.month_names[(self.entry.date.month % 12) - 1]} {self.entry.date.day}, {self.entry.date.year}"
 
         entry_popup.open()
-        #rs.entry_groups[baf.rtrn_disp()].entries.remove(self.entry_ui)
-        #rs.temp_date_box.change_children()
-        #rs.temp_popup.dismiss()
 
     def fix_lines(self, *args):
         switch = True
@@ -620,7 +617,16 @@ class PopupLayout(FloatLayout):
             self.t_ctg = rs.temp_ctg
             rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc, rs.chosen_date)
 
-            if not self.is_edit:
+            switch = True
+            if self.is_edit and self.edit_entry.entry.date == rs.chosen_date:
+                rs.temp_layout.remove_widget(self.edit_entry)
+                rs.entry_groups[datetime.date(rs.chosen_date.year, rs.chosen_date.month, 1)].entries[rs.entry_groups[datetime.date(rs.chosen_date.year, rs.chosen_date.month, 1)].entries.index(self.edit_entry)] = EntryUI(rs.temp_entry)
+                rs.entry_list[rs.entry_list.index(self.edit_entry)] = EntryUI(rs.temp_entry)
+                self.edit_entry.entry.acc.change_value(self.edit_entry.entry.amount, True if not self.edit_entry.entry.mode else False)
+                #rs.temp_entry.acc.change_value(rs.temp_entry.amount, rs.temp_entry.mode)
+                rs.temp_popup.dismiss()
+                switch = False
+            if switch:
                 if baf.rtrn_disp() == temp_date:
                     rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
                     rs.entry_list.insert(0, EntryUI(rs.temp_entry))
@@ -631,9 +637,10 @@ class PopupLayout(FloatLayout):
                     if rs.entry_groups.get(temp_date) is None:
                         rs.entry_groups[temp_date] = rs.EntryGroup(temp_date)
                     rs.entry_groups[temp_date].entries.insert(0, EntryUI(rs.temp_entry))
-            else:
-                pass #Add edit mode
-
+                if self.is_edit:
+                    self.edit_entry.entry.acc.change_value(self.edit_entry.entry.amount, True if not self.edit_entry.entry.mode else False)
+                    rs.entry_groups[datetime.date(self.edit_entry.entry.date.year, self.edit_entry.entry.date.month, 1)].entries.remove(self.edit_entry)
+                    rs.temp_popup.dismiss()
             rs.temp_date_box.change_children()
             rs.temp_acc.update_text()
 
