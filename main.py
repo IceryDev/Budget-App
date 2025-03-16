@@ -7,7 +7,7 @@ import kivy
 from kivy.config import Config
 from kivy.input import MotionEvent
 
-from resources import dft_currencies, currency_choice, chosen_date, dft_acc
+from resources import dft_currencies, currency_choice
 
 Config.set('graphics', 'width', '320')
 Config.set('graphics', 'height', '620')
@@ -354,7 +354,7 @@ class EntryInfoPopup(FloatLayout):
 
         self.confirm_popup = Popup(title="Are you sure?", content=ConfirmPopup(self.del_entry), size_hint=(0.6, 0.3))
         rs.mini_popup = self.confirm_popup
-        self.delete_entry = Button(size_hint=(None, None), width=45,  # Resume here, after removing fix the amounts in the accounts.
+        self.delete_entry = Button(size_hint=(None, None), width=45,
                                    height=45, pos_hint={'center_x': 0.9, 'top': 1.15},
                                    background_color=(0, 0, 0, 0))
         self.delete_img = Image(source="Images/delete_entry.png", color=(1, 1, 1, 0.5))
@@ -365,7 +365,7 @@ class EntryInfoPopup(FloatLayout):
                                    height=65, pos_hint={'center_x': 0.1, 'top': 1.175},
                                    background_color=(0, 0, 0, 0))
         self.edit_img = Image(source="Images/edit_entry.png", color=(1, 1, 1, 0.5))
-        self.edit_entry.bind(size=self._update_img, pos=self._update_img)
+        self.edit_entry.bind(size=self._update_img, pos=self._update_img, on_press=self.ed_entry)
         self.edit_entry.add_widget(self.edit_img)
 
         self.desc_box.add_widget(self.desc)
@@ -391,11 +391,34 @@ class EntryInfoPopup(FloatLayout):
         self.edit_img.pos = self.edit_entry.pos
         self.edit_img.size = self.edit_entry.size
 
-    def del_entry(self, mini_popup, *args):
+    def del_entry(self, *args):
+        self.entry.acc.change_value(self.entry.amount, True if not self.entry.mode else False)
         rs.entry_groups[baf.rtrn_disp()].entries.remove(self.entry_ui)
         rs.temp_date_box.change_children()
         rs.temp_popup.dismiss()
         rs.mini_popup.dismiss()
+
+    def ed_entry(self,*args):
+        entry_popup = Popup(title="Edit Entry:", content=PopupLayout(is_edit=True, edit_entry=self.entry_ui), size_hint=(0.9, 0.8))
+        entry_popup.content.popup = entry_popup
+        entry_popup.content.amount_box.text = str(self.entry.amount)
+        if self.entry.mode:
+            entry_popup.content.d_button.state = 'down'
+            entry_popup.content.e_button.state = 'normal'
+        else:
+            entry_popup.content.ctg_scroll_ui.child_buttons[rs.dft_ctg.index(self.entry.ctg)].state = 'down'
+            entry_popup.content.ctg_scroll_ui.child_buttons[0].state = 'normal'
+        entry_popup.content.account_select.select(rs.dft_acc.index(self.entry.acc))
+        entry_popup.content.t_acc = self.entry.acc
+        entry_popup.content.t_desc = self.entry.description
+        entry_popup.content.desc_box.text = self.entry.description
+        rs.chosen_date = self.entry.date
+        entry_popup.content.date_choice.text = f"{rs.month_names[(self.entry.date.month % 12) - 1]} {self.entry.date.day}, {self.entry.date.year}"
+
+        entry_popup.open()
+        #rs.entry_groups[baf.rtrn_disp()].entries.remove(self.entry_ui)
+        #rs.temp_date_box.change_children()
+        #rs.temp_popup.dismiss()
 
     def fix_lines(self, *args):
         switch = True
@@ -450,7 +473,7 @@ class EntryButton(FloatLayout):
         self.img = Image(source="Images/addentry.png")
         self.button.add_widget(self.img)
         self.button.bind(size=self._update_image_pos, pos=self._update_image_pos, on_press=self.entry_menu)
-        self.menu_popup = Popup(title="Add Entry:", content=PopupLayout(), size_hint=(0.9, 0.8))
+        self.menu_popup = Popup(title="Add Entry:", content=PopupLayout(is_edit=False), size_hint=(0.9, 0.8))
         self.add_widget(self.button)
 
     def _update_image_pos(self, *args):
@@ -458,11 +481,12 @@ class EntryButton(FloatLayout):
         self.img.pos = self.button.pos
 
     def entry_menu(self, *args):
+        rs.chosen_date = datetime.date.today()
         self.menu_popup.open()
         self.menu_popup.content.popup = self.menu_popup
 
 class PopupLayout(FloatLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, is_edit = False, edit_entry = None, **kwargs): #edit_entry is an EntryUI object
         super().__init__(**kwargs)
         self.cols = 1
         self.t_amount = 0
@@ -470,7 +494,10 @@ class PopupLayout(FloatLayout):
         self.t_ctg = rs.dft_ctg[0]
         self.t_desc = ""
         self.t_acc = rs.dft_acc[0] #Change this so it appears as the last used account
-        self.t_date = datetime.date.today() #Change this later
+        if is_edit:
+            self.edit_entry = edit_entry
+            rs.chosen_date = self.edit_entry.entry.date
+        self.is_edit = is_edit
         self.popup = Popup()
 
         self.amount_text = Label(text="Amount:", size_hint=(1, 0.1),
@@ -507,6 +534,7 @@ class PopupLayout(FloatLayout):
             self.account_ui = AccountUI(i, size_hint_y=None, height=40)
             self.account_choice = self.account_ui.button
             self.account_choice.bind(on_release=lambda a: self.account_select.select(a.no))
+            self.account_select.bind(on_select=lambda instance, a: setattr(self, 't_acc', rs.dft_acc[a]))
             self.account_select.add_widget(self.account_ui)
         self.account_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.75, 'center_x': 0.5},
                                      text="Cash")
@@ -542,7 +570,7 @@ class PopupLayout(FloatLayout):
         self.date_choice = Button(background_color=(66 / 255, 66 / 255, 66 / 255, 1),
                                   text=f"{rs.month_names[(datetime.date.today().month % 12) - 1]} {datetime.date.today().day}, {rs.disp_year}",
                                   size_hint=(0.935, 0.07), pos_hint={'top': 0.14, 'center_x': 0.5})
-        self.date_popup = Popup(title="Choose a Date:", content=DateSelection(), size_hint=(0.8, 0.5))
+        self.date_popup = Popup(title="Choose a Date:", content=DateSelection(is_edit=self.is_edit), size_hint=(0.8, 0.5))
         self.date_popup.content.popup = self.date_popup
         self.date_choice.bind(on_press=self.open_date_popup)
 
@@ -592,16 +620,19 @@ class PopupLayout(FloatLayout):
             self.t_ctg = rs.temp_ctg
             rs.temp_entry = rs.Entry(self.t_ctg, self.t_amount, self.t_acc, self.t_mode, self.t_desc, rs.chosen_date)
 
-            if baf.rtrn_disp() == temp_date:
-                rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
-                rs.entry_list.insert(0, EntryUI(rs.temp_entry))
-                if rs.entry_groups.get(baf.rtrn_disp()) is None:
-                    rs.entry_groups[baf.rtrn_disp()] = rs.EntryGroup(baf.rtrn_disp())
-                rs.entry_groups[baf.rtrn_disp()].entries.insert(0, EntryUI(rs.temp_entry))
+            if not self.is_edit:
+                if baf.rtrn_disp() == temp_date:
+                    rs.temp_layout.add_widget(EntryUI(rs.temp_entry))
+                    rs.entry_list.insert(0, EntryUI(rs.temp_entry))
+                    if rs.entry_groups.get(baf.rtrn_disp()) is None:
+                        rs.entry_groups[baf.rtrn_disp()] = rs.EntryGroup(baf.rtrn_disp())
+                    rs.entry_groups[baf.rtrn_disp()].entries.insert(0, EntryUI(rs.temp_entry))
+                else:
+                    if rs.entry_groups.get(temp_date) is None:
+                        rs.entry_groups[temp_date] = rs.EntryGroup(temp_date)
+                    rs.entry_groups[temp_date].entries.insert(0, EntryUI(rs.temp_entry))
             else:
-                if rs.entry_groups.get(temp_date) is None:
-                    rs.entry_groups[temp_date] = rs.EntryGroup(temp_date)
-                rs.entry_groups[temp_date].entries.insert(0, EntryUI(rs.temp_entry))
+                pass #Add edit mode
 
             rs.temp_date_box.change_children()
             rs.temp_acc.update_text()
@@ -616,20 +647,28 @@ class PopupLayout(FloatLayout):
             self.error_text.color = (1, 0.2, 0.2, 1)
 
 class DateSelection(FloatLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, is_edit = False, **kwargs):
         super().__init__(**kwargs)
         self.month_calendar = calendar.Calendar()
-        self.displayed_month = rs.current_month
         self.is_updating = False
         self.popup = Popup()
         self.parent_layout = None
-        rs.temp_date_select = self
-        self.displayed_year = datetime.date.today().year
+        self.is_edit = is_edit
+        if not is_edit: rs.temp_date_select = self
+        else: rs.temp_date_select_edit = self
         self.x_positions = itertools.cycle([0.05, 0.2, 0.35, 0.5, 0.65, 0.8, 0.95])
         self.y_positions = itertools.cycle(reversed([0.25, 0.4, 0.55, 0.7, 0.85]))
         self.y_positions_6wk = itertools.cycle(reversed([0.25, 0.37, 0.49, 0.61, 0.73, 0.85]))
-        self.chosen_month_dates = list(self.month_calendar.itermonthdates(self.displayed_year, self.displayed_month))
-        self.chosen_date = datetime.date.today()
+        if not is_edit:
+            self.displayed_month = rs.current_month
+            self.displayed_year = datetime.date.today().year
+            self.chosen_month_dates = list(self.month_calendar.itermonthdates(self.displayed_year, self.displayed_month))
+            self.chosen_date = datetime.date.today()
+        else:
+            self.displayed_month = rs.chosen_date.month
+            self.displayed_year = rs.chosen_date.year
+            self.chosen_month_dates = list(self.month_calendar.itermonthdates(self.displayed_year, self.displayed_month))
+            self.chosen_date = rs.chosen_date
 
         self.l_button = Button(size_hint=(None, None),
                                width=30,
@@ -719,7 +758,8 @@ class DateSelection(FloatLayout):
                                            pos_hint={'top': self.temp_y_pos if mode else self.temp_y_pos_6wk, 'center_x': self.temp_x_pos},
                                            group="date", size_hint=(0.1, 0.1),
                                            text=str(self.chosen_month_dates[7*a+b].day),
-                                           background_color=(0, 0, 0, 0))
+                                           background_color=(0, 0, 0, 0),
+                                         is_edit=self.is_edit)
                 if self.chosen_month_dates[7].month == self.chosen_month_dates[7*a+b].month:
                     temp_button.category = "e"
                 elif self.chosen_month_dates[7].month > self.chosen_month_dates[7*a+b].month:
@@ -738,9 +778,10 @@ class DateSelection(FloatLayout):
             else: self.temp_y_pos_6wk = next(self.y_positions_6wk)
 
 class DateButton(ToggleButton):
-    def __init__(self, date: datetime.date, **kwargs):
+    def __init__(self, date: datetime.date, is_edit = False, **kwargs):
         super().__init__(**kwargs)
         self.date = date
+        self.is_edit = is_edit
         self.category = "e" # b, e, a for before, exact and after
         self.bind(state=self._state_change)
         self.background_down = 'white'
@@ -750,11 +791,14 @@ class DateButton(ToggleButton):
             match self.category:
                 case "e":
                     self.background_color = (100 / 255, 100 / 255, 100 / 255, 1)
-                    rs.temp_date_select.chosen_date = self.date
+                    if not self.is_edit: rs.temp_date_select.chosen_date = self.date
+                    else: rs.temp_date_select_edit.chosen_date = self.date
                 case "b":
-                    rs.temp_date_select.l_clicked()
+                    if not self.is_edit: rs.temp_date_select.l_clicked()
+                    else: rs.temp_date_select_edit.l_clicked()
                 case "a":
-                    rs.temp_date_select.r_clicked()
+                    if not self.is_edit: rs.temp_date_select.r_clicked()
+                    else: rs.temp_date_select_edit.r_clicked()
                 case _:
                     pass
         else:
@@ -794,6 +838,7 @@ class CtgButton(ToggleButton):
 class CtgSelector(GridLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.child_buttons = []
 
         with self.canvas.before:
             Color(22/255, 22/255, 22/255, 1)
@@ -806,6 +851,7 @@ class CtgSelector(GridLayout):
         #self.width = rs.ctg_view_width
         for i in range(rs.dft_ctg.__len__()):
             a = CtgButton(rs.dft_ctg[i], group="ctg")
+            self.child_buttons.append(a)
             self.add_widget(a)
             if i == 0: a.state = 'down'
 

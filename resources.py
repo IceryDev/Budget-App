@@ -82,6 +82,7 @@ temp_entry = None #Passes the value to create it in the main view
 temp_layout = None #Passes the main-layout
 temp_acc = None #Passes the account-box
 temp_date_select = None #Passes the date selection UI
+temp_date_select_edit = None #Passes the date selection UI for edit mode
 temp_date_box = None #Passes the date box UI
 temp_popup = None #Passes the temporary entry UI info popup
 mini_popup = None #Passes the confirm-popup
