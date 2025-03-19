@@ -211,18 +211,21 @@ class MainInterface(GridLayout):
         self.is_updating = False
 
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
+        print(f"add_widget, {widget}")
         super().add_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
         rs.temp_acc.update_text()
         scroll_view_main.update_from_scroll()
 
     def remove_widget(self, widget, mode: bool = False, *args, **kwargs):
+        print(f"remove, {widget}")
         super().remove_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
         rs.temp_acc.update_text()
         scroll_view_main.update_from_scroll()
 
     def on_child_change(self, instance, value):
+        print("occ")
         if self.is_updating: return
 
         self.is_updating = True
@@ -233,11 +236,13 @@ class MainInterface(GridLayout):
         self.is_updating = False
 
     def check_dates(self, added_entry: rs.Entry, *args):
+        print("cd")
         if len(self.children) == 1: #The first case is important as otherwise we would get an index error.
             self.add_widget(DateEntryUI(added_entry), True)
             self.children = [self.children[1]] + [self.children[0]]
             return
-        
+
+        print("yay")
         if added_entry.date < self.children[1].entry.date: #Add to end with older dates
             self.add_widget(DateEntryUI(added_entry), True)
             self.children = [self.children[1]] + [self.children[0]] + self.children[2:]
@@ -246,6 +251,11 @@ class MainInterface(GridLayout):
                 if added_entry.date == self.children[x].entry.date:
                     self.children = self.children[1:x] + [self.children[0]] + self.children[x:]
                     break
+                elif added_entry.date > self.children[x].entry.date:
+                    self.add_widget(DateEntryUI(added_entry), True)
+                    self.children = self.children[1:x+1] + [self.children[0]] + [self.children[1]] + self.children[x+1:]
+                    break
+
         elif self.children[-1].entry.date < added_entry.date: #Add to beginning
             self.add_widget(DateEntryUI(added_entry), True)
             self.children = self.children[2:] + [self.children[1]] + [self.children[0]]
