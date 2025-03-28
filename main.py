@@ -35,6 +35,16 @@ import datetime
 
 scroll_view_main = ScrollView()
 
+def re_construct_save():
+    try:
+        input_file = baf.load_entry_groups()
+        for key, value in input_file.items():
+            rs.entry_groups[key] = rs.EntryGroup(key, entries=[EntryUI(x) for x in value.entries])
+        return 0
+    except AttributeError:
+        return 1
+
+
 class TitleBox(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -211,21 +221,18 @@ class MainInterface(GridLayout):
         self.is_updating = False
 
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
-        print(f"add_widget, {widget}")
         super().add_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
         rs.temp_acc.update_text()
         scroll_view_main.update_from_scroll()
 
     def remove_widget(self, widget, mode: bool = False, *args, **kwargs):
-        print(f"remove, {widget}")
         super().remove_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
         rs.temp_acc.update_text()
         scroll_view_main.update_from_scroll()
 
     def on_child_change(self, instance, value):
-        print("occ")
         if self.is_updating: return
 
         self.is_updating = True
@@ -236,24 +243,21 @@ class MainInterface(GridLayout):
         self.is_updating = False
 
     def check_dates(self, added_entry: rs.Entry, *args):
-        print("cd")
         if len(self.children) == 1: #The first case is important as otherwise we would get an index error.
             self.add_widget(DateEntryUI(added_entry), True)
             self.children = [self.children[1]] + [self.children[0]]
             return
-
-        print("yay")
         if added_entry.date < self.children[1].entry.date: #Add to end with older dates
             self.add_widget(DateEntryUI(added_entry), True)
             self.children = [self.children[1]] + [self.children[0]] + self.children[2:]
-        elif self.children[-1].entry.date >= added_entry.date >= self.children[0].entry.date: #Existing dates
+        elif self.children[-1].entry.date >= added_entry.date >= self.children[0].entry.date: #Existing dates or dates in between
             for x in reversed(range((self.children.__len__()))):
                 if added_entry.date == self.children[x].entry.date:
                     self.children = self.children[1:x] + [self.children[0]] + self.children[x:]
                     break
                 elif added_entry.date > self.children[x].entry.date:
                     self.add_widget(DateEntryUI(added_entry), True)
-                    self.children = self.children[1:x+1] + [self.children[0]] + [self.children[1]] + self.children[x+1:]
+                    self.children = self.children[2:x+2] + [self.children[1], self.children[0]] + self.children[x+2:]
                     break
 
         elif self.children[-1].entry.date < added_entry.date: #Add to beginning
@@ -405,6 +409,7 @@ class EntryInfoPopup(FloatLayout):
         self.entry.acc.change_value(self.entry.amount, True if not self.entry.mode else False)
         rs.entry_groups[baf.rtrn_disp()].entries.remove(self.entry_ui)
         rs.temp_date_box.change_children()
+        baf.save_entry_groups()
         rs.temp_popup.dismiss()
         rs.mini_popup.dismiss()
 
@@ -488,7 +493,7 @@ class EntryButton(FloatLayout):
         self.img.pos = self.button.pos
 
     def entry_menu(self, *args):
-        rs.chosen_date = datetime.date.today()
+        #rs.chosen_date = datetime.date.today()
         self.menu_popup.open()
         self.menu_popup.content.popup = self.menu_popup
 
@@ -657,6 +662,7 @@ class PopupLayout(FloatLayout):
             for item in self.account_select.children:
                 for item_2 in item.children:
                     item_2.update_text() #All this does is update the text of the accounts in dropdown
+            baf.save_entry_groups()
             self.popup.dismiss()
 
         except ValueError:
@@ -912,6 +918,7 @@ class AccountUI(FloatLayout):
 class BaseApp(App):
     def build(self):
         global scroll_view_main
+        temp = re_construct_save()
         Window.clearcolor = (22/255, 22/255, 22/255, 1)
 
         main_layout = FloatLayout()
@@ -937,7 +944,8 @@ class BaseApp(App):
         bottom_entry_ly = EntryButton(size_hint=(1, 0.01), pos_hint={'top':0.11})
 
         for i in range(1, 5):
-            bottom_button_ly.add_widget(Button(background_color=(0, 0.5, 0.5, 1)))
+            bottom_button_ly.add_widget(ToggleButton(background_color=(0, 0.5, 0.5, 1), group="main",
+                                                     state='down' if i == 2 else 'normal'))
 
         main_layout.add_widget(top_layout)
         main_layout.add_widget(date_layout)
@@ -948,6 +956,8 @@ class BaseApp(App):
         main_layout.add_widget(bottom_entry_ly)
 
         scroll_view_main = mid_layout
+        if temp == 0:
+            rs.temp_date_box.change_children()
         return main_layout
 
 if __name__ == "__main__":

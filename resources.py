@@ -60,8 +60,10 @@ class Entry:
         if self.mode: self.ctg = income_ctg
 
 class EntryGroup:
-    def __init__(self, start_date: datetime.date, end_date = None, group_type: int = 0):
-        self.entries: list = []
+    def __init__(self, start_date: datetime.date, end_date = None, group_type: int = 0, entries=None):
+        if entries is None:
+            entries = []
+        self.entries = entries
         self.start = start_date
         self.group_type = group_type #0 for month, 1 for year, 2 for week ONLY 0 WILL BE IMPLEMENTED FOR NOW
         if self.group_type > 1:
@@ -88,6 +90,7 @@ temp_popup = None #Passes the temporary entry UI info popup
 mini_popup = None #Passes the confirm-popup
 entry_list = []
 entry_groups: dict[datetime.date:EntryGroup] = {} #Later we are going to set the entry list to the children of these.
+serializable_groups = {}
 shown_entries = 10
 
 class PlaceDoesNotExistError(Exception):
