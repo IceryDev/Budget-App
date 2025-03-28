@@ -44,7 +44,6 @@ def re_construct_save():
     except AttributeError:
         return 1
 
-
 class TitleBox(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -212,6 +211,7 @@ class AccountBox(FloatLayout):
         self.expense_int.text = f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.expense_int.color = baf.color_setter(self.float_expense)
 
+#region Records
 class MainInterface(GridLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -914,6 +914,60 @@ class AccountUI(FloatLayout):
         self.float_amount = self.amount
         self.balance_int.text = f"{baf.sign_setter(self.float_amount)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.float_amount)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.balance_int.color = baf.color_setter(self.float_amount)
+#endregion
+
+class ScreenButton(ToggleButton):
+    def __init__(self, img_path: str, text: str, function, no: int, **kwargs):
+        super().__init__(**kwargs)
+
+        self.func = function
+        self.no = no
+        self.initial_switch = False # Makes sure that the program does not run the change screen code while initialising
+
+        self._state_change(None, 'down' if self.no == 2 else 'normal')
+        self.background_down = 'white'
+
+        self.bg = Image(color=(0, 116/255, 129/255, 63/100))
+        self.img = Image(source=img_path)
+        self.name = Label(text=text, font_size=14)
+        self.bind(size=self._update_image_pos, pos=self._update_image_pos, state=self._state_change)
+        self.add_widget(self.bg)
+        self.add_widget(self.img)
+        self.add_widget(self.name)
+
+    def _update_image_pos(self, *args):
+        self.img.size = self.size
+        self.bg.size = self.size
+        self.img.pos = self.pos
+        self.bg.pos = self.pos
+        self.img.width *= 11/14
+        self.img.height *= 11/14
+        self.img.y += 13
+        self.name.pos = self.pos
+        self.name.y -= 40
+        match self.no:
+            case 1:
+                self.name.x -= 1
+                self.img.x += 10
+            case 2:
+                self.name.x -= 10
+                self.img.x -= 0
+            case 3:
+                self.name.x += 5
+                self.img.x += 15
+            case 4:
+                self.name.x -= 0
+                self.img.x += 10
+
+    def _state_change(self, instance, value):
+        if value == 'down':
+            self.background_color = (200/255, 200/255, 200/255, 50/100)
+            if self.initial_switch:
+                self.func()
+            else:
+                self.initial_switch = True
+        else:
+            self.background_color = (0, 0, 0, 0)
 
 class BaseApp(App):
     def build(self):
@@ -939,12 +993,15 @@ class BaseApp(App):
 
         mid_layout_ui.bind(minimum_height=mid_layout_ui.setter('height'))
         mid_layout.add_widget(mid_layout_ui)
-
         bottom_button_ly = GridLayout(cols=4, size_hint=(1, 0.09), pos_hint={'top':0.09})
         bottom_entry_ly = EntryButton(size_hint=(1, 0.01), pos_hint={'top':0.11})
 
+        funcs = [self.analysis_screen, self.records_screen, self.budget_screen, self.accounts_screen]
+        button_text = ["Analysis", "Records", "Budgets", "Edit"]
+        button_img = ["Images/Analytics.png", "Images/Records.png", "Images/Analytics.png", "Images/Analytics.png"]
+
         for i in range(1, 5):
-            bottom_button_ly.add_widget(ToggleButton(background_color=(0, 0.5, 0.5, 1), group="main",
+            bottom_button_ly.add_widget(ScreenButton(button_img[i-1], button_text[i-1], funcs[i-1], i, background_color=(0, 0, 0, 0), group="main",
                                                      state='down' if i == 2 else 'normal'))
 
         main_layout.add_widget(top_layout)
@@ -959,6 +1016,18 @@ class BaseApp(App):
         if temp == 0:
             rs.temp_date_box.change_children()
         return main_layout
+
+    def budget_screen(self):
+        print("Budget")
+
+    def records_screen(self):
+        print("Records")
+
+    def analysis_screen(self):
+        print("Analysis")
+
+    def accounts_screen(self):
+        print("Accounts")
 
 if __name__ == "__main__":
     BaseApp().run()
