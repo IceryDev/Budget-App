@@ -171,7 +171,7 @@ class AccountBox(FloatLayout):
         self.float_balance = 0.0
         self.float_expense = 0.0
 
-        rs.temp_acc = self
+        #rs.main_widgets['acc_bal_exp'] = self
 
         self.balance_label = Label(text=f"Balance:",
                                    text_size=(int(Config.get('graphics', 'width'))/4, None),
@@ -211,6 +211,56 @@ class AccountBox(FloatLayout):
         self.expense_int.text = f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.expense_int.color = baf.color_setter(self.float_expense)
 
+class AccountBoxBudget(FloatLayout):
+    budget_total = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
+    expense = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.background = Image(size_hint=(1, 1), pos_hint={'center_x': 0.5, 'center_y': 0.5},
+                                color=(0, 60/255, 64/255, 63/100))
+        self.float_total = float((sum([x.value for x in rs.dft_acc])))
+        self.float_expense = float((sum([x.value for x in rs.dft_acc])))
+        print(float((sum([x.value for x in rs.dft_acc]))))
+
+        self.budget_label = Label(text=f"Total Budget:",
+                                   text_size=(int(Config.get('graphics', 'width'))/3, None),
+                                   pos_hint={'center_x': 0.26, 'center_y': 0.75},
+                                   halign='center', font_size=16)
+        self.expense_label = Label(text=f"Expenses:",
+                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+                                   pos_hint={'center_x': 0.75, 'center_y': 0.75},
+                                   halign='center', font_size=16)
+        self.budget_int = Label(text=f"{baf.sign_setter(self.float_total)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.budget_total)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+                                   pos_hint={'center_x': 0.25, 'center_y': 0.25},
+                                   color=baf.color_setter(self.float_total),
+                                   halign='center', font_size=16)
+        self.bind(budget_total=self.update_text)
+        self.expense_int = Label(text=f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+                                   pos_hint={'center_x': 0.75, 'center_y': 0.25},
+                                   color=baf.color_setter(self.float_expense),
+                                   halign='center', font_size=16)
+        self.bind(expense=self.update_text)
+
+        self.add_widget(self.background)
+        self.add_widget(self.budget_label)
+        self.add_widget(self.expense_label)
+        self.add_widget(self.budget_int)
+        self.add_widget(self.expense_int)
+
+    def update_text(self, *args):
+        self.budget_total = float((sum([x.value for x in rs.dft_acc])))
+        self.expense = float((sum([x.value for x in rs.dft_acc])))
+
+        print(float((sum([x.value for x in rs.dft_acc]))))
+        self.float_total = self.budget_total
+        self.float_expense = self.expense
+        self.budget_int.text = f"{baf.sign_setter(self.float_total)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.float_total)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.budget_int.color = baf.color_setter(self.float_total)
+        self.expense_int.text = f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.expense_int.color = baf.color_setter(self.float_expense)
+
 #region Records
 class MainInterface(GridLayout):
     def __init__(self, **kwargs):
@@ -223,13 +273,13 @@ class MainInterface(GridLayout):
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().add_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
-        rs.temp_acc.update_text()
+        rs.main_widgets['acc_bal_exp'].update_text()
         scroll_view_main.update_from_scroll()
 
     def remove_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().remove_widget(widget, *args, **kwargs)
         if not mode: self.on_child_change(self, None)
-        rs.temp_acc.update_text()
+        rs.main_widgets['acc_bal_exp'].update_text()
         scroll_view_main.update_from_scroll()
 
     def on_child_change(self, instance, value):
@@ -657,15 +707,21 @@ class PopupLayout(FloatLayout):
                     rs.entry_groups[datetime.date(self.edit_entry.entry.date.year, self.edit_entry.entry.date.month, 1)].entries.remove(self.edit_entry)
                     rs.temp_popup.dismiss()
             rs.temp_date_box.change_children()
-            rs.temp_acc.update_text()
+            rs.main_widgets['acc_bal_exp'].update_text()
+            rs.main_widgets['acc_bdg_exp'].update_text()
 
             for item in self.account_select.children:
                 for item_2 in item.children:
                     item_2.update_text() #All this does is update the text of the accounts in dropdown
             baf.save_entry_groups()
+            self.error_text.color = (1, 0.2, 0.2, 0)
             self.popup.dismiss()
 
         except ValueError:
+            self.amount_box.foreground_color = (1, 0.2, 0.2, 1)
+            self.error_text.color = (1, 0.2, 0.2, 1)
+
+        except IndexError:
             self.amount_box.foreground_color = (1, 0.2, 0.2, 1)
             self.error_text.color = (1, 0.2, 0.2, 1)
 
@@ -726,7 +782,7 @@ class DateSelection(FloatLayout):
         self.temp_x_pos = next(self.x_positions)
         self.temp_buttons = []
 
-        if self.chosen_month_dates.__len__() // 6:
+        if self.chosen_month_dates.__len__() // 7 == 6:
             self._create_buttons(False)
         else: self._create_buttons(True)
 
@@ -962,7 +1018,7 @@ class ScreenButton(ToggleButton):
     def _state_change(self, instance, value):
         if value == 'down':
             self.background_color = (200/255, 200/255, 200/255, 50/100)
-            if self.initial_switch:
+            if self.initial_switch or self.no != 2:
                 self.func()
             else:
                 self.initial_switch = True
@@ -976,14 +1032,21 @@ class BaseApp(App):
         Window.clearcolor = (22/255, 22/255, 22/255, 1)
 
         main_layout = FloatLayout()
+        rs.main_widgets['main'] = main_layout
 
         top_layout = TitleBox(size_hint=(1, 0.07), pos_hint={'top':1})
+        rs.main_widgets['top'] = top_layout
 
         date_layout = DateBox(size_hint=(1, 0.05), pos_hint={'top':0.93})
+        rs.main_widgets['date'] = date_layout
 
-        acc_layout = AccountBox(size_hint=(1, 0.07), pos_hint={'top':0.88})
+        acc_layout = AccountBox(size_hint=(1, 0.07), pos_hint={'top': 0.88})
+        acc_layout_budget = AccountBoxBudget(size_hint=(1, 0.07), pos_hint={'top': 0.88})
+        rs.main_widgets['acc_bal_exp'] = acc_layout
+        rs.main_widgets['acc_bdg_exp'] = acc_layout_budget
 
         empty_layout = BoxLayout(size_hint=(1, 0.01), pos_hint={'top':0.81})
+        rs.main_widgets['empty'] = empty_layout
 
         mid_layout = ScrollView(size_hint=(1, 0.68), pos_hint={'top':0.80})
         rs.view_height = mid_layout.height
@@ -1003,6 +1066,8 @@ class BaseApp(App):
         for i in range(1, 5):
             bottom_button_ly.add_widget(ScreenButton(button_img[i-1], button_text[i-1], funcs[i-1], i, background_color=(0, 0, 0, 0), group="main",
                                                      state='down' if i == 2 else 'normal'))
+        rs.main_widgets['m_buttons'] = bottom_button_ly
+        rs.main_widgets['entry_button'] = bottom_entry_ly
 
         main_layout.add_widget(top_layout)
         main_layout.add_widget(date_layout)
@@ -1017,16 +1082,30 @@ class BaseApp(App):
             rs.temp_date_box.change_children()
         return main_layout
 
-    def budget_screen(self):
-        print("Budget")
+    @staticmethod
+    def budget_screen(): # Fix this when you implement the third tab, because some of the widgets removed here won't be in that one
+        rs.main_widgets['main'].remove_widget(rs.main_widgets['acc_bal_exp'])
+        rs.main_widgets['main'].remove_widget(rs.main_widgets['empty'])
+        rs.main_widgets['main'].remove_widget(rs.main_widgets['entry_button'])
+        rs.main_widgets['main'].add_widget(rs.main_widgets['acc_bdg_exp'])
+        scroll_view_main.remove_widget(rs.temp_layout)
+        rs.main_widgets['main'].do_layout()
 
-    def records_screen(self):
-        print("Records")
+    @staticmethod
+    def records_screen():
+        rs.main_widgets['main'].add_widget(rs.main_widgets['acc_bal_exp'])
+        rs.main_widgets['main'].add_widget(rs.main_widgets['empty'])
+        rs.main_widgets['main'].add_widget(rs.main_widgets['entry_button'])
+        rs.main_widgets['main'].remove_widget(rs.main_widgets['acc_bdg_exp'])
+        scroll_view_main.add_widget(rs.temp_layout)
+        rs.main_widgets['main'].do_layout()
 
-    def analysis_screen(self):
+    @staticmethod
+    def analysis_screen():
         print("Analysis")
 
-    def accounts_screen(self):
+    @staticmethod
+    def accounts_screen():
         print("Accounts")
 
 if __name__ == "__main__":

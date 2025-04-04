@@ -82,7 +82,6 @@ currency_choice = 0 #The index of the currency above
 temp_ctg = dft_ctg[0] #Passes the value from the child button object to parent object
 temp_entry = None #Passes the value to create it in the main view
 temp_layout = None #Passes the main-layout
-temp_acc = None #Passes the account-box
 temp_date_select = None #Passes the date selection UI
 temp_date_select_edit = None #Passes the date selection UI for edit mode
 temp_date_box = None #Passes the date box UI
@@ -92,6 +91,7 @@ entry_list = []
 entry_groups: dict[datetime.date:EntryGroup] = {} #Later we are going to set the entry list to the children of these.
 serializable_groups = {}
 shown_entries = 10
+main_widgets = {} # Stores various necessary widgets to pass them to other sections of the code. See main.py, BaseApp
 
 class PlaceDoesNotExistError(Exception):
     #See ba_funcs, align_currency_text
