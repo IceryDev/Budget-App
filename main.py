@@ -220,7 +220,7 @@ class AccountBoxBudget(FloatLayout):
                                 color=(0, 60/255, 64/255, 63/100))
         self.float_total = float((sum([x.value for x in rs.dft_acc])))
         self.float_expense = float((sum([x.value for x in rs.dft_acc])))
-        print(float((sum([x.value for x in rs.dft_acc]))))
+        #print(float((sum([x.value for x in rs.dft_acc]))))
 
         self.budget_label = Label(text=f"Total Budget:",
                                    text_size=(int(Config.get('graphics', 'width'))/3, None),
@@ -253,7 +253,7 @@ class AccountBoxBudget(FloatLayout):
         self.budget_total = float((sum([x.value for x in rs.dft_acc])))
         self.expense = float((sum([x.value for x in rs.dft_acc])))
 
-        print(float((sum([x.value for x in rs.dft_acc]))))
+        #print(float((sum([x.value for x in rs.dft_acc]))))
         self.float_total = self.budget_total
         self.float_expense = self.expense
         self.budget_int.text = f"{baf.sign_setter(self.float_total)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.float_total)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
@@ -738,6 +738,8 @@ class DateSelection(FloatLayout):
         self.x_positions = itertools.cycle([0.05, 0.2, 0.35, 0.5, 0.65, 0.8, 0.95])
         self.y_positions = itertools.cycle(reversed([0.25, 0.4, 0.55, 0.7, 0.85]))
         self.y_positions_6wk = itertools.cycle(reversed([0.25, 0.37, 0.49, 0.61, 0.73, 0.85]))
+        self.y_positions_4wk = itertools.cycle(reversed([0.25, 0.45, 0.65, 0.85]))
+        self.y_pos_list = [self.y_positions_4wk, self.y_positions, self.y_positions_6wk]
         if not is_edit:
             self.displayed_month = rs.current_month
             self.displayed_year = datetime.date.today().year
@@ -777,14 +779,19 @@ class DateSelection(FloatLayout):
         self.r_button.add_widget(self.r_image)
         self.add_widget(self.r_button)
 
-        self.temp_y_pos = next(self.y_positions)
-        self.temp_y_pos_6wk = next(self.y_positions_6wk)
+        self.temp_y_pos = next(self.y_pos_list[1])
+        self.temp_y_pos_6wk = next(self.y_pos_list[2])
+        self.temp_y_pos_4wk = next(self.y_pos_list[0])
+        self.temp_y_pos_list = [self.temp_y_pos_4wk, self.temp_y_pos, self.temp_y_pos_6wk]
         self.temp_x_pos = next(self.x_positions)
         self.temp_buttons = []
 
-        if self.chosen_month_dates.__len__() // 7 == 6:
-            self._create_buttons(False)
-        else: self._create_buttons(True)
+        if self.chosen_month_dates.__len__() == 42:
+            self._create_buttons(6)
+        elif self.chosen_month_dates.__len__() == 35:
+            self._create_buttons(5)
+        else:
+            self._create_buttons(4)
 
         self.confirm_button = Button(pos_hint={'top':0.1, 'center_x':0.5}, size_hint=(None, None),
                                      width=120, height=30, text="Confirm")
@@ -803,7 +810,7 @@ class DateSelection(FloatLayout):
         self.popup.dismiss()
 
     def l_clicked(self, *args):
-        self.displayed_month = (self.displayed_month - 1)
+        self.displayed_month -= 1
         self.displayed_year = int(datetime.date.today().year) + ((self.displayed_month - 1) // 12)
         self._update_text()
 
@@ -823,18 +830,21 @@ class DateSelection(FloatLayout):
         self.temp_buttons.clear()
 
         if self.chosen_month_dates.__len__() == 42:
-            self._create_buttons(False)
-        else: self._create_buttons(True)
+            self._create_buttons(6)
+        elif self.chosen_month_dates.__len__() == 35:
+            self._create_buttons(5)
+        else:
+            self._create_buttons(4)
 
 
         self.do_layout()
         self.is_updating = False
 
-    def _create_buttons(self, mode):
-        for a in range(5 if mode else 6):
+    def _create_buttons(self, weeks):
+        for a in range(weeks):
             for b in range(7):
                 temp_button = DateButton(self.chosen_month_dates[7*a+b],
-                                           pos_hint={'top': self.temp_y_pos if mode else self.temp_y_pos_6wk, 'center_x': self.temp_x_pos},
+                                           pos_hint={'top': self.temp_y_pos_list[weeks-4], 'center_x': self.temp_x_pos},
                                            group="date", size_hint=(0.1, 0.1),
                                            text=str(self.chosen_month_dates[7*a+b].day),
                                            background_color=(0, 0, 0, 0),
@@ -848,13 +858,12 @@ class DateSelection(FloatLayout):
                     temp_button.category = "a"
                     temp_button.color = (1, 1, 1, 100/255)
 
-                if self.chosen_month_dates[7*a+b] == self.chosen_date:
+                if self.chosen_month_dates[7*a+b] == self.chosen_date and self.chosen_month_dates[7*a+b].month == self.displayed_month:
                     temp_button.state = "down"
                 self.add_widget(temp_button)
                 self.temp_x_pos = next(self.x_positions)
                 self.temp_buttons.append(temp_button)
-            if mode: self.temp_y_pos = next(self.y_positions)
-            else: self.temp_y_pos_6wk = next(self.y_positions_6wk)
+            self.temp_y_pos_list[weeks-4] = next(self.y_pos_list[weeks-4])
 
 class DateButton(ToggleButton):
     def __init__(self, date: datetime.date, is_edit = False, **kwargs):
