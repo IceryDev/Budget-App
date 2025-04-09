@@ -5,7 +5,6 @@ import math
 
 import kivy
 from kivy.config import Config
-from kivy.input import MotionEvent
 
 from resources import dft_currencies, currency_choice
 
@@ -32,6 +31,12 @@ from functools import partial
 import resources as rs
 import ba_funcs as baf
 import datetime
+
+'''Legend for button groups:
+   ctg: Assigned to the category selection buttons in the entry creation menu
+   date: Assigned to the date selection buttons in the entry creation menu
+   main: Assigned to the main navigation buttons
+   transaction: Assigned to Expense/Deposit buttons in the entry creation menu'''
 
 scroll_view_main = ScrollView()
 
@@ -260,6 +265,94 @@ class AccountBoxBudget(FloatLayout):
         self.budget_int.color = baf.color_setter(self.float_total)
         self.expense_int.text = f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.expense_int.color = baf.color_setter(self.float_expense)
+
+class BudgetScroll(GridLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.cols = 1
+        self.child_count = 0
+        self.is_updating = False
+
+        self.add_budget = Button(background_color=(0, 0, 0, 0))
+        self.budget_img = Image(source="Images/AddNewBudget.png", size_hint=(1.2, 1.2),
+                                         pos_hint={'center_x':0.5, 'top':1}, color=(1, 1, 1, 0.8))
+        self.budget_text = Label(text="Add new budget")
+        self.add_budget.bind(pos=self.fix_img_pos, size=self.fix_img_pos, on_press=self.open_popup)
+        self.add_budget.add_widget(self.budget_img)
+        self.add_budget.add_widget(self.budget_text)
+        self.add_widget(BudgetUI(rs.dft_ctg[1]))
+        self.add_widget(self.add_budget)
+
+    def fix_img_pos(self, *args):
+        self.budget_img.pos = self.add_budget.pos
+        self.budget_text.pos = self.add_budget.pos
+        self.budget_img.size = self.add_budget.size
+        self.budget_text.size = self.add_budget.size
+        self.budget_img.width *= 1.2
+        self.budget_img.height *= 1.2
+        self.budget_img.x -= int(Config.get('graphics', 'width')) / 8
+        self.budget_img.y -= int(Config.get('graphics', 'height')) / 62
+        self.budget_text.y -= int(Config.get('graphics', 'height')) / 186
+
+    def add_widget(self, widget, mode: bool = False, *args, **kwargs):
+        super().add_widget(widget, *args, **kwargs)
+        if not mode: self.on_child_change(self, None)
+        scroll_view_main.update_from_scroll()
+
+    def remove_widget(self, widget, mode: bool = False, *args, **kwargs):
+        super().remove_widget(widget, *args, **kwargs)
+        if not mode: self.on_child_change(self, None)
+        scroll_view_main.update_from_scroll()
+
+    def on_child_change(self, instance, value):
+        if self.is_updating: return
+
+        self.is_updating = True
+        self.child_count = len(self.children)
+        self.size_hint_y = self.child_count * rs.view_height / 700
+        self.do_layout()
+        self.is_updating = False
+
+    @staticmethod
+    def open_popup(self, *args):
+        temp_popup = Popup(title="Add Budget", content=FloatLayout(), size_hint=(0.9, 0.8))
+        temp_popup.open()
+
+class BudgetUI(FloatLayout):
+    def __init__(self, ctg: rs.Category, **kwargs):
+        super().__init__(**kwargs)
+
+        self.height = rs.view_height
+        self.icon = Image(source=ctg.icon_path, pos_hint={'x':-0.25, 'center_y':0.5},
+                          size_hint=(0.7, 0.7))
+        self.category = Label(text=f"{ctg.name}",
+                              text_size=(int(Config.get('graphics', 'width'))/2, None),
+                              halign='center',
+                              pos_hint={'center_x':0.54, 'center_y':0.8},
+                              font_size=17)
+        self.amount = Label(text=f"Yes",
+                            text_size=(int(Config.get('graphics', 'width')), None),
+                            pos_hint={'center_x': 0.52, 'center_y': 0.5},
+                            halign='right',
+                            font_size=22)
+        self.bar = Image(pos_hint={'x': 0.2, 'center_y': 0.1},
+                         size_hint=(0.75, 0.02), color=(88/255, 88/255, 88/255, 1))
+        self.overlay_button = Button(background_color=(0, 0, 0, 0))
+        self.overlay_button.bind(on_press=self.show_info, pos=self.update_pos, size=self.update_pos)
+        self.add_widget(self.icon)
+        self.add_widget(self.category)
+        self.add_widget(self.amount)
+        self.add_widget(self.bar)
+        self.add_widget(self.overlay_button)
+
+    def show_info(self, *args):
+        #rs.temp_layout.open_info_popup(self.entry, self)
+        pass
+
+    def update_pos(self, *args):
+        self.overlay_button.pos = self.pos
+        self.overlay_button.size = self.size
 
 #region Records
 class MainInterface(GridLayout):
@@ -1061,7 +1154,9 @@ class BaseApp(App):
         rs.view_height = mid_layout.height
 
         mid_layout_ui = MainInterface(size_hint_y=rs.shown_entries * mid_layout.height / 700)
+        mid_layout_budget = BudgetScroll(size_hint_y=rs.shown_entries * mid_layout.height / 700)
         rs.temp_layout = mid_layout_ui
+        rs.main_widgets['budget_scroll'] = mid_layout_budget
 
         mid_layout_ui.bind(minimum_height=mid_layout_ui.setter('height'))
         mid_layout.add_widget(mid_layout_ui)
@@ -1098,6 +1193,7 @@ class BaseApp(App):
         rs.main_widgets['main'].remove_widget(rs.main_widgets['entry_button'])
         rs.main_widgets['main'].add_widget(rs.main_widgets['acc_bdg_exp'])
         scroll_view_main.remove_widget(rs.temp_layout)
+        scroll_view_main.add_widget(rs.main_widgets['budget_scroll'])
         rs.main_widgets['main'].do_layout()
 
     @staticmethod
@@ -1106,6 +1202,7 @@ class BaseApp(App):
         rs.main_widgets['main'].add_widget(rs.main_widgets['empty'])
         rs.main_widgets['main'].add_widget(rs.main_widgets['entry_button'])
         rs.main_widgets['main'].remove_widget(rs.main_widgets['acc_bdg_exp'])
+        scroll_view_main.remove_widget(rs.main_widgets['budget_scroll'])
         scroll_view_main.add_widget(rs.temp_layout)
         rs.main_widgets['main'].do_layout()
 
