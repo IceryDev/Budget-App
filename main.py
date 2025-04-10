@@ -4,6 +4,7 @@ import random
 import math
 
 import kivy
+from docutils.nodes import entry
 from kivy.config import Config
 
 from resources import dft_currencies, currency_choice
@@ -186,14 +187,14 @@ class AccountBox(FloatLayout):
                                    text_size=(int(Config.get('graphics', 'width'))/4, None),
                                    pos_hint={'center_x': 0.75, 'center_y': 0.75},
                                    halign='center', font_size=16)
-        self.balance_int = Label(text=f"{baf.sign_setter(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
-                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+        self.balance_int = Label(text=f"{baf.sign_setter(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.balance, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                                   text_size=(int(Config.get('graphics', 'width'))/3.5, None),
                                    pos_hint={'center_x': 0.25, 'center_y': 0.25},
                                    color=baf.color_setter(self.float_balance),
                                    halign='center', font_size=16)
         self.bind(balance=self.update_text)
-        self.expense_int = Label(text=f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
-                                   text_size=(int(Config.get('graphics', 'width'))/4, None),
+        self.expense_int = Label(text=f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.expense, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                                   text_size=(int(Config.get('graphics', 'width'))/3.5, None),
                                    pos_hint={'center_x': 0.75, 'center_y': 0.25},
                                    color=baf.color_setter(self.float_expense),
                                    halign='center', font_size=16)
@@ -274,14 +275,15 @@ class BudgetScroll(GridLayout):
         self.child_count = 0
         self.is_updating = False
 
-        self.add_budget = Button(background_color=(0, 0, 0, 0))
-        self.budget_img = Image(source="Images/AddNewBudget.png", size_hint=(1.2, 1.2),
+        self.add_budget = Button(background_color=(0, 0, 0, 0), size_hint=(0.7, 0.7))
+        self.budget_img = Image(source="Images/AddNewBudget.png", size_hint=(1, 1),
                                          pos_hint={'center_x':0.5, 'top':1}, color=(1, 1, 1, 0.8))
         self.budget_text = Label(text="Add new budget")
         self.add_budget.bind(pos=self.fix_img_pos, size=self.fix_img_pos, on_press=self.open_popup)
         self.add_budget.add_widget(self.budget_img)
         self.add_budget.add_widget(self.budget_text)
         self.add_widget(BudgetUI(rs.dft_ctg[1]))
+        self.add_widget(BudgetUI(rs.dft_ctg[2]))
         self.add_widget(self.add_budget)
 
     def fix_img_pos(self, *args):
@@ -289,11 +291,12 @@ class BudgetScroll(GridLayout):
         self.budget_text.pos = self.add_budget.pos
         self.budget_img.size = self.add_budget.size
         self.budget_text.size = self.add_budget.size
-        self.budget_img.width *= 1.2
-        self.budget_img.height *= 1.2
-        self.budget_img.x -= int(Config.get('graphics', 'width')) / 8
-        self.budget_img.y -= int(Config.get('graphics', 'height')) / 62
-        self.budget_text.y -= int(Config.get('graphics', 'height')) / 186
+        self.budget_img.width *= 1
+        self.budget_img.height *= 1
+        #self.budget_img.x += int(Config.get('graphics', 'width')) / 75
+        #self.budget_img.y -= int(Config.get('graphics', 'height')) / 120
+        #self.budget_text.y += int(Config.get('graphics', 'height')) / 140
+        self.budget_text.x += int(Config.get('graphics', 'width')) / 16
 
     def add_widget(self, widget, mode: bool = False, *args, **kwargs):
         super().add_widget(widget, *args, **kwargs)
@@ -310,7 +313,7 @@ class BudgetScroll(GridLayout):
 
         self.is_updating = True
         self.child_count = len(self.children)
-        self.size_hint_y = self.child_count * rs.view_height / 700
+        self.size_hint_y = self.child_count * rs.view_height / 500
         self.do_layout()
         self.is_updating = False
 
@@ -320,29 +323,55 @@ class BudgetScroll(GridLayout):
         temp_popup.open()
 
 class BudgetUI(FloatLayout):
+    amount_spent = NumericProperty(0.0)
+
     def __init__(self, ctg: rs.Category, **kwargs):
         super().__init__(**kwargs)
 
+        self.ctg = ctg
+        self.budget_amount = 10000
+        rs.budgetUIs[self.ctg.name] = self
+        self.amount_spent = float(sum([x.entry.amount for x in rs.entry_list if x.entry.ctg == self.ctg]))
+        self.fill_width = (self.amount_spent / self.budget_amount) * 210 if self.amount_spent < self.budget_amount else 210
+
         self.height = rs.view_height
-        self.icon = Image(source=ctg.icon_path, pos_hint={'x':-0.25, 'center_y':0.5},
-                          size_hint=(0.7, 0.7))
-        self.category = Label(text=f"{ctg.name}",
+        self.icon = Image(source=self.ctg.icon_path, pos_hint={'x':-0.165, 'center_y':0.75},
+                          size_hint=(0.5, 0.5))
+        self.category = Label(text=f"{self.ctg.name}",
                               text_size=(int(Config.get('graphics', 'width'))/2, None),
-                              halign='center',
-                              pos_hint={'center_x':0.54, 'center_y':0.8},
-                              font_size=17)
-        self.amount = Label(text=f"Yes",
-                            text_size=(int(Config.get('graphics', 'width')), None),
-                            pos_hint={'center_x': 0.52, 'center_y': 0.5},
-                            halign='right',
-                            font_size=22)
-        self.bar = Image(pos_hint={'x': 0.2, 'center_y': 0.1},
-                         size_hint=(0.75, 0.02), color=(88/255, 88/255, 88/255, 1))
+                              halign='left',
+                              pos_hint={'center_x':0.39, 'center_y':0.9},
+                              font_size=16)
+        self.progress_bar_fill = Image(color=(1/2, 1/4, 1/3, 1), size_hint=(None, None),
+                                       height=14, width=self.fill_width, pos_hint={'x':0.197, 'center_y':0.3})
+        self.progress_bar_img_b = Image(color=(1, 1, 1, 1), size_hint=(None, None),
+                                      height=17, width=213, pos_hint={'center_x':0.46, 'center_y':0.3})
+        self.progress_bar_img_f = Image(color=(22 / 255, 22 / 255, 22 / 255, 1), size_hint=(None, None),
+                                        height=14, width=210, pos_hint={'center_x': 0.46, 'center_y':0.3})
+        self.progress_bar_fill.bind()
+        self.amount = Label(text=f"Budget: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                            text_size=(int(Config.get('graphics', 'width')) / 2, None),
+                            pos_hint={'center_x': 0.77, 'center_y': 0.9},
+                            halign='right', shorten=True,
+                            font_size=16)
+
+        self.remaining = Label(text=f"Remaining: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount - self.amount_spent, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                            text_size=(int(Config.get('graphics', 'width')) / 1.5, None),
+                            pos_hint={'center_x': 0.458, 'center_y': 0.68},
+                            halign='left', shorten=True,
+                            font_size=16)
+        self.bar = Image(pos_hint={'x': 0.05, 'center_y': 0.1},
+                         size_hint=(0.9, 0.02), color=(88/255, 88/255, 88/255, 1))
         self.overlay_button = Button(background_color=(0, 0, 0, 0))
         self.overlay_button.bind(on_press=self.show_info, pos=self.update_pos, size=self.update_pos)
+        self.bind(amount_spent=self.update_bar)
         self.add_widget(self.icon)
         self.add_widget(self.category)
+        self.add_widget(self.progress_bar_img_b)
+        self.add_widget(self.progress_bar_img_f)
+        self.add_widget(self.progress_bar_fill)
         self.add_widget(self.amount)
+        self.add_widget(self.remaining)
         self.add_widget(self.bar)
         self.add_widget(self.overlay_button)
 
@@ -353,6 +382,12 @@ class BudgetUI(FloatLayout):
     def update_pos(self, *args):
         self.overlay_button.pos = self.pos
         self.overlay_button.size = self.size
+
+    def update_bar(self, *args): #This being triggered twice is NOT a bug, bind code is affected as this code changes the property again
+        self.amount_spent = float(sum([x.entry.amount for x in rs.entry_list if x.entry.ctg == self.ctg]))
+        self.progress_bar_fill.width = (self.amount_spent / self.budget_amount) * 210 if self.amount_spent < self.budget_amount else 210 #The width of the bar
+        self.amount.text = f"Budget: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.remaining.text = f"Remaining: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount - self.amount_spent, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
 
 #region Records
 class MainInterface(GridLayout):
@@ -806,6 +841,9 @@ class PopupLayout(FloatLayout):
             for item in self.account_select.children:
                 for item_2 in item.children:
                     item_2.update_text() #All this does is update the text of the accounts in dropdown
+
+            if rs.budgetUIs.get(rs.temp_entry.ctg.name):
+                rs.budgetUIs[rs.temp_entry.ctg.name].amount_spent += 1
             baf.save_entry_groups()
             self.error_text.color = (1, 0.2, 0.2, 0)
             self.popup.dismiss()
@@ -1154,7 +1192,7 @@ class BaseApp(App):
         rs.view_height = mid_layout.height
 
         mid_layout_ui = MainInterface(size_hint_y=rs.shown_entries * mid_layout.height / 700)
-        mid_layout_budget = BudgetScroll(size_hint_y=rs.shown_entries * mid_layout.height / 700)
+        mid_layout_budget = BudgetScroll(size_hint_y=rs.shown_entries * mid_layout.height / 500)
         rs.temp_layout = mid_layout_ui
         rs.main_widgets['budget_scroll'] = mid_layout_budget
 
@@ -1194,6 +1232,9 @@ class BaseApp(App):
         rs.main_widgets['main'].add_widget(rs.main_widgets['acc_bdg_exp'])
         scroll_view_main.remove_widget(rs.temp_layout)
         scroll_view_main.add_widget(rs.main_widgets['budget_scroll'])
+        for ctg in rs.dft_ctg:
+            if rs.budgetUIs.get(ctg.name):
+                rs.budgetUIs[ctg.name].amount_spent += 1
         rs.main_widgets['main'].do_layout()
 
     @staticmethod
