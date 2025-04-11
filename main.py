@@ -319,7 +319,7 @@ class BudgetScroll(GridLayout):
 
     @staticmethod
     def open_popup(self, *args):
-        temp_popup = Popup(title="Add Budget", content=FloatLayout(), size_hint=(0.9, 0.8))
+        temp_popup = Popup(title="Add Budget:", content=AddBudget(), size_hint=(0.9, 0.6))
         temp_popup.open()
 
 class BudgetUI(FloatLayout):
@@ -419,6 +419,122 @@ class BudgetUI(FloatLayout):
         self.exceeded.color = (246 / 255, 68 / 255, 61 / 255, 1) if self.budget_amount - self.amount_spent < 0 else (0, 0, 0, 0)
         self.percentage_img_overlay.size_hint_y = 0.54 * (self.amount_spent/self.budget_amount) if self.budget_amount >= self.amount_spent else 0.54
         self.percentage_img_overlay.color = (0, 116/255, 129/255, 80/100) if self.budget_amount >= self.amount_spent else (246 / 255, 68 / 255, 61 / 255, 8/10)
+
+class AddBudget(FloatLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.budget_text = Label(text="Budget:", size_hint=(1, 0.1),
+                                 halign="left", pos_hint={'top': 1.025, 'x': 0.035},
+                                 font_size=17)
+        self.error_text = Label(text="Please enter a valid amount!", size_hint=(0.5, 0.1),
+                                halign="center", pos_hint={'top': 1.0, 'x': 0.4},
+                                font_size=17, color=(1, 0.2, 0.2, 0))
+        self.budget_text.bind(size=self.budget_text.setter('text_size'))
+        self.budget_box = TextInput(size_hint=(0.935, 0.133), pos_hint={'top': 0.9, 'x': 0.035},
+                                    multiline=False, input_type='number',
+                                    padding_y=(15, 5), halign='center',
+                                    background_color=(22 / 255, 22 / 255, 22 / 255, 1),
+                                    cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
+                                    padding_x=(10, 10), text="0")
+        self.budget_box.bind(focus=self.on_focus)
+
+        self.currency_text = Label(text=rs.dft_currencies[rs.currency_choice][0], size_hint=(0.1, 0.1),
+                                   pos_hint={'top': 0.885, 'x': baf.align_currency_text(rs.dft_currencies[rs.currency_choice][1], place='text_box')},
+                                   font_size=17)
+
+        self.ctg_text = Label(text="Category:", size_hint=(1, 0.1),
+                              halign="left", pos_hint={'top': 0.78, 'x': 0.035},
+                              font_size=17)
+        self.ctg_text.bind(size=self.ctg_text.setter('text_size'))
+
+        self.ctg_scroll = ScrollView(do_scroll_x=True,
+                                     do_scroll_y=False, size_hint=(0.935, 0.22),
+                                     pos_hint={'top': 0.65, 'x': 0.035})
+
+        self.ctg_scroll_ui = CtgBudget(size_hint_x=self.ctg_scroll.width / (rs.dft_ctg.__len__() ** 2))
+        self.ctg_scroll_ui.bind(minimum_width=self.ctg_scroll_ui.setter('width'))
+        self.ctg_scroll.add_widget(self.ctg_scroll_ui)
+
+        self.add_widget(self.budget_text)
+        self.add_widget(self.error_text)
+        self.add_widget(self.budget_box)
+        self.add_widget(self.currency_text)
+        self.add_widget(self.ctg_text)
+        self.add_widget(self.ctg_scroll)
+
+    def on_focus(self, instance, value):
+        if value:
+            self.budget_box.foreground_color = (1, 1, 1, 1)
+
+class CtgBudget(GridLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.child_buttons = []
+        self.remaining_ctg = [x for x in rs.dft_ctg if x not in rs.budgetUIs.values()]
+
+        with self.canvas.before:
+            Color(22/255, 22/255, 22/255, 1)
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+            self.bind(size=self._update_rect, pos=self._update_rect)
+
+        self.rows = 1
+        self.spacing = 1
+        self.padding = [0, 0, 0, 0]
+        #self.width = rs.ctg_view_width
+        for i in range(rs.dft_ctg.__len__()):
+            a = CtgButtonBudget(rs.dft_ctg[i], self, group="ctg_budget")
+            if a.ctg not in self.remaining_ctg: a.disabled = True
+            self.child_buttons.append(a)
+            self.add_widget(a)
+
+    def _update_rect(self, *args):
+        self.rect.size = self.size
+        self.rect.pos = self.pos
+
+    def update_buttons(self, *args):
+        self.clear_widgets()
+        self.child_buttons.clear()
+        self.remaining_ctg = [x for x in rs.dft_ctg if x not in rs.budgetUIs.values()]
+
+        for i in range(rs.dft_ctg.__len__()):
+            a = CtgButtonBudget(rs.dft_ctg[i], self, group="ctg_budget")
+            if a.ctg not in self.remaining_ctg: a.disabled = True
+            self.child_buttons.append(a)
+            self.add_widget(a)
+
+
+class CtgButtonBudget(ToggleButton):
+    def __init__(self, ctg: rs.Category, parent, **kwargs):
+        super().__init__(**kwargs)
+        self.ctg = ctg
+        self.parent_widget = parent
+        self.background_color = (0, 0, 0, 0)
+        self.background_down = 'white'
+
+        self.img = Image(source=self.ctg.icon_path)
+        self.name = Label(text=self.ctg.name, font_size=14)
+        self.bind(size=self._update_image_pos, pos=self._update_image_pos, state=self._state_change)
+        self.add_widget(self.img)
+        self.add_widget(self.name)
+
+    def _update_image_pos(self, *args):
+        self.img.size = self.size
+        self.img.pos = self.pos
+        self.img.width *= 7/9
+        self.img.height *= 7/9
+        self.img.y += 16
+        self.img.x += 9
+        self.name.pos = self.pos
+        self.name.y -= 40
+        self.name.x -= 5
+
+    def _state_change(self, instance, value):
+        if value == 'down':
+            self.background_color = (200/255, 200/255, 200/255, 50/100)
+            rs.temp_ctg_budget = self.ctg
+        else:
+            self.background_color = (0, 0, 0, 0)
 
 #region Records
 class MainInterface(GridLayout):
@@ -709,7 +825,6 @@ class EntryButton(FloatLayout):
 class PopupLayout(FloatLayout):
     def __init__(self, is_edit = False, edit_entry = None, **kwargs): #edit_entry is an EntryUI object
         super().__init__(**kwargs)
-        self.cols = 1
         self.t_amount = 0
         self.t_mode = False
         self.t_ctg = rs.dft_ctg[0]

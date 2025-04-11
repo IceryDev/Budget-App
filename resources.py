@@ -81,6 +81,7 @@ dft_currencies = [["€", True], ["$", True], ["₺", False], ["₽", False]] #T
 currency_choice = 2 #The index of the currency above
 carry_budget_exceed = True
 temp_ctg = dft_ctg[0] #Passes the value from the child button object to parent object
+temp_ctg_budget = None #The same as above but for budget UI
 temp_entry = None #Passes the value to create it in the main view
 temp_layout = None #Passes the main-layout
 temp_date_select = None #Passes the date selection UI
