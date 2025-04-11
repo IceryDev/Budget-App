@@ -212,19 +212,19 @@ class AccountBox(FloatLayout):
 
         self.float_balance = self.balance
         self.float_expense = self.expense
-        self.balance_int.text = f"{baf.sign_setter(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.balance_int.text = f"{baf.sign_setter(self.float_balance)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.float_balance, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.balance_int.color = baf.color_setter(self.float_balance)
-        self.expense_int.text = f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(self.expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.expense_int.text = f"{baf.sign_setter(self.float_expense)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.expense, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.expense_int.color = baf.color_setter(self.float_expense)
 
 class AccountBoxBudget(FloatLayout):
-    budget_total = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
+    budget_total = NumericProperty(float((sum([x.budget_amount for x in rs.budgetUIs.values()]))))
     expense = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.background = Image(size_hint=(1, 1), pos_hint={'center_x': 0.5, 'center_y': 0.5},
                                 color=(0, 60/255, 64/255, 63/100))
-        self.float_total = float((sum([x.value for x in rs.dft_acc])))
+        self.float_total = float((sum([x.budget_amount for x in rs.budgetUIs.items()])))
         self.float_expense = float((sum([x.value for x in rs.dft_acc])))
         #print(float((sum([x.value for x in rs.dft_acc]))))
 
@@ -256,7 +256,7 @@ class AccountBoxBudget(FloatLayout):
         self.add_widget(self.expense_int)
 
     def update_text(self, *args):
-        self.budget_total = float((sum([x.value for x in rs.dft_acc])))
+        self.budget_total = float((sum([x.budget_amount for x in rs.budgetUIs.values()])))
         self.expense = float((sum([x.value for x in rs.dft_acc])))
 
         #print(float((sum([x.value for x in rs.dft_acc]))))
@@ -331,6 +331,7 @@ class BudgetUI(FloatLayout):
         self.ctg = ctg
         self.budget_amount = 10000
         rs.budgetUIs[self.ctg.name] = self
+        rs.main_widgets['acc_bdg_exp'].update_text()
         self.amount_spent = float(sum([x.entry.amount for x in rs.entry_list if x.entry.ctg == self.ctg]))
         self.fill_width = (self.amount_spent / self.budget_amount) * 210 if self.amount_spent < self.budget_amount else 210
 
@@ -342,12 +343,13 @@ class BudgetUI(FloatLayout):
                               halign='left',
                               pos_hint={'center_x':0.39, 'center_y':0.9},
                               font_size=16)
-        self.progress_bar_fill = Image(color=(1/2, 1/4, 1/3, 1), size_hint=(None, None),
-                                       height=14, width=self.fill_width, pos_hint={'x':0.197, 'center_y':0.3})
+        self.progress_bar_fill = Image(color=((127+(64*(self.amount_spent/self.budget_amount)))/255, (199+(-169*(self.amount_spent/self.budget_amount)))/255, (127+(-97*(self.amount_spent/self.budget_amount)))/255, 1),
+                                       size_hint=(None, None), height=14,
+                                       width=self.fill_width, pos_hint={'x':0.194, 'center_y':0.32})
         self.progress_bar_img_b = Image(color=(1, 1, 1, 1), size_hint=(None, None),
-                                      height=17, width=213, pos_hint={'center_x':0.46, 'center_y':0.3})
+                                      height=17, width=213, pos_hint={'center_x':0.457, 'center_y':0.32})
         self.progress_bar_img_f = Image(color=(22 / 255, 22 / 255, 22 / 255, 1), size_hint=(None, None),
-                                        height=14, width=210, pos_hint={'center_x': 0.46, 'center_y':0.3})
+                                        height=14, width=210, pos_hint={'center_x': 0.457, 'center_y':0.32})
         self.progress_bar_fill.bind()
         self.amount = Label(text=f"Budget: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
                             text_size=(int(Config.get('graphics', 'width')) / 2, None),
@@ -357,9 +359,26 @@ class BudgetUI(FloatLayout):
 
         self.remaining = Label(text=f"Remaining: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount - self.amount_spent, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
                             text_size=(int(Config.get('graphics', 'width')) / 1.5, None),
-                            pos_hint={'center_x': 0.458, 'center_y': 0.68},
+                            pos_hint={'center_x': 0.458, 'center_y': 0.5},
                             halign='left', shorten=True,
                             font_size=16)
+        self.spent = Label(text=f"Spent: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.amount_spent, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
+                               text_size=(int(Config.get('graphics', 'width')) / 1.5, None),
+                               pos_hint={'center_x': 0.458, 'center_y': 0.68},
+                               halign='left', shorten=True,
+                               font_size=16)
+        self.exceeded = Label(text=f"Budget Exceeded",
+                              text_size=(int(Config.get('graphics', 'width')) / 2, None),
+                              halign='left', color=(1, 1, 1, 0),
+                              pos_hint={'center_x': 0.39, 'center_y': 0.18},
+                              font_size=12)
+        self.percentage_img = Image(color=(0, 60/255, 64/255, 80/100), size_hint=(0.18, 0.54),
+                                    pos_hint={'x':0.77, 'top':0.7})
+        self.percentage_img_overlay = Image(color=(0, 116/255, 129/255, 80/100), size_hint=(0.18, 0.01),
+                                            pos_hint={'x': 0.77, 'y': 0.16})
+        self.percentage_txt = Label(text=f"100%", text_size=(int(Config.get('graphics', 'width')) / 4, None),
+                                    pos_hint={'center_x': 0.86, 'center_y': 0.45},
+                                    font_size=22, halign='center')
         self.bar = Image(pos_hint={'x': 0.05, 'center_y': 0.1},
                          size_hint=(0.9, 0.02), color=(88/255, 88/255, 88/255, 1))
         self.overlay_button = Button(background_color=(0, 0, 0, 0))
@@ -372,6 +391,11 @@ class BudgetUI(FloatLayout):
         self.add_widget(self.progress_bar_fill)
         self.add_widget(self.amount)
         self.add_widget(self.remaining)
+        self.add_widget(self.spent)
+        self.add_widget(self.exceeded)
+        self.add_widget(self.percentage_img)
+        self.add_widget(self.percentage_img_overlay)
+        self.add_widget(self.percentage_txt)
         self.add_widget(self.bar)
         self.add_widget(self.overlay_button)
 
@@ -387,7 +411,14 @@ class BudgetUI(FloatLayout):
         self.amount_spent = float(sum([x.entry.amount for x in rs.entry_list if x.entry.ctg == self.ctg]))
         self.progress_bar_fill.width = (self.amount_spent / self.budget_amount) * 210 if self.amount_spent < self.budget_amount else 210 #The width of the bar
         self.amount.text = f"Budget: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
-        self.remaining.text = f"Remaining: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount - self.amount_spent, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.remaining.text = f"Remaining: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount - self.amount_spent, 2)) if self.budget_amount - self.amount_spent > 0 else 0}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.spent.text = f"Spent: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.amount_spent, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
+        self.percentage_txt.text = f"{(self.amount_spent*100)/self.budget_amount:.1f}%" if self.budget_amount >= self.amount_spent else "100%"
+        #self.remaining.color = baf.color_setter(self.budget_amount-self.amount_spent, dft_more=(1, 1, 1, 1), dft_less=(246 / 255, 68 / 255, 61 / 255, 1))
+        self.progress_bar_fill.color = ((127+(119*(self.amount_spent/self.budget_amount)))/255, (199+(-131*(self.amount_spent/self.budget_amount)))/255, (127+(-66*(self.amount_spent/self.budget_amount)))/255, 1)
+        self.exceeded.color = (246 / 255, 68 / 255, 61 / 255, 1) if self.budget_amount - self.amount_spent < 0 else (0, 0, 0, 0)
+        self.percentage_img_overlay.size_hint_y = 0.54 * (self.amount_spent/self.budget_amount) if self.budget_amount >= self.amount_spent else 0.54
+        self.percentage_img_overlay.color = (0, 116/255, 129/255, 80/100) if self.budget_amount >= self.amount_spent else (246 / 255, 68 / 255, 61 / 255, 8/10)
 
 #region Records
 class MainInterface(GridLayout):
