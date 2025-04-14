@@ -69,6 +69,16 @@ class EntryGroup:
         if self.group_type > 1:
              self.end = end_date
 
+class BudgetGroup:
+    def __init__(self, start_date: datetime.date, end_date = None, group_type: int = 0, budgets=None):
+        if budgets is None:
+            budgets: dict[str:int] = {}
+        self.budgets = budgets
+        self.start = start_date
+        self.group_type = group_type #0 for month, 1 for year, 2 for week ONLY 0 WILL BE IMPLEMENTED FOR NOW
+        if self.group_type > 1:
+             self.end = end_date
+
 dft_acc = [Account("Cash", "Images/cash_acc.png"), Account("Card","Images/card_acc.png"), Account("Savings", "Images/Analytics.png")]
 dft_ctg = [Category("Food", "Images/food_ctg.png"), Category("Transport", "Images/transport_ctg.png"),
            Category("Communication", "Images/comms_ctg.png"), Category("Tourism", "Images/tourism_ctg.png"),
@@ -92,7 +102,7 @@ mini_popup = None #Passes the confirm-popup
 budgetUIs = {} #Passes any budget UI object
 entry_list = []
 entry_groups: dict[datetime.date:EntryGroup] = {}
-budget_groups: dict[datetime.date:dict[str:int]] = {} #Str is ctg.name and int is budget amount
+budget_groups: dict[datetime.date:BudgetGroup] = {}
 serializable_groups = {}
 shown_entries = 10
 main_widgets = {} # Stores various necessary widgets to pass them to other sections of the code. See main.py, BaseApp
@@ -103,4 +113,8 @@ class PlaceDoesNotExistError(Exception):
 
 class IndexMissingError(Exception):
     #See main, MainInterface, check_dates
+    pass
+
+class CategoryError(Exception):
+    #See main, AddBudget, callback
     pass

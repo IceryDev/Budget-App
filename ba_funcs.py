@@ -33,7 +33,7 @@ def save_entry_groups():
     for key, value in resources.entry_groups.items():
         resources.serializable_groups[key] = resources.EntryGroup(key, entries=[x.entry for x in value.entries])
     with open('logs.pkl', 'wb') as file:
-        dill.dump([resources.serializable_groups, resources.dft_acc, resources.dft_ctg], file)
+        dill.dump([resources.serializable_groups, resources.dft_acc, resources.dft_ctg, resources.budget_groups], file)
 
 def load_entry_groups():
     try:
@@ -42,6 +42,7 @@ def load_entry_groups():
             resources.serializable_groups = temp_list[0]
             resources.dft_acc = temp_list[1]
             resources.dft_ctg = temp_list[2]
+            resources.budget_groups = temp_list[3]
             return resources.serializable_groups
     except FileNotFoundError:
         pass

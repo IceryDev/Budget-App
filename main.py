@@ -35,11 +35,13 @@ import datetime
 
 '''Legend for button groups:
    ctg: Assigned to the category selection buttons in the entry creation menu
+   ctg_budget: Assigned to the category selection buttons in the budget creation menu
    date: Assigned to the date selection buttons in the entry creation menu
    main: Assigned to the main navigation buttons
    transaction: Assigned to Expense/Deposit buttons in the entry creation menu'''
 
 scroll_view_main = ScrollView()
+view_no = 1 #0 for Analysis, 1 for Records and so on
 
 def re_construct_save():
     try:
@@ -148,12 +150,14 @@ class DateBox(BoxLayout):
         rs.disp_month = (rs.disp_month - 1)
         rs.disp_year = int(datetime.date.today().year) + (rs.disp_month // 12)
         self.change_children()
+        rs.main_widgets['acc_bdg_exp'].update_text()
         self._update_text()
 
     def rgt_clicked(self, *args):
         rs.disp_month = (rs.disp_month + 1)
         rs.disp_year = int(datetime.date.today().year) + (rs.disp_month // 12)
         self.change_children()
+        rs.main_widgets['acc_bdg_exp'].update_text()
         self._update_text()
 
     @staticmethod
@@ -166,6 +170,17 @@ class DateBox(BoxLayout):
         rs.temp_layout.is_updating = False
         for item in reversed(rs.entry_list):
             rs.temp_layout.add_widget(item)
+
+        rs.budgetUIs.clear()
+        if rs.budget_groups.get(baf.rtrn_disp()) is not None:
+            for key, value in rs.budget_groups.get(baf.rtrn_disp()).budgets.items(): rs.budgetUIs[key] = BudgetUI([x for x in rs.dft_ctg if x.name == key][0], value)
+        rs.main_widgets['budget_scroll'].is_updating = True
+        rs.main_widgets['budget_scroll'].clear_widgets()
+        rs.main_widgets['budget_scroll'].is_updating = False
+        for item in reversed(rs.budgetUIs.values()):
+            rs.main_widgets['budget_scroll'].add_widget(item)
+            item.amount_spent += 1
+        rs.main_widgets['budget_scroll'].add_widget(rs.main_widgets['budget_scroll'].add_budget)
 
 class AccountBox(FloatLayout):
     balance = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
@@ -219,7 +234,7 @@ class AccountBox(FloatLayout):
 
 class AccountBoxBudget(FloatLayout):
     budget_total = NumericProperty(float((sum([x.budget_amount for x in rs.budgetUIs.values()]))))
-    expense = NumericProperty(float((sum([x.value for x in rs.dft_acc]))))
+    expense = NumericProperty(-1 * float(sum([x.entry.amount for x in rs.entry_list if x.entry.mode == False])))
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.background = Image(size_hint=(1, 1), pos_hint={'center_x': 0.5, 'center_y': 0.5},
@@ -257,7 +272,7 @@ class AccountBoxBudget(FloatLayout):
 
     def update_text(self, *args):
         self.budget_total = float((sum([x.budget_amount for x in rs.budgetUIs.values()])))
-        self.expense = float((sum([x.value for x in rs.dft_acc])))
+        self.expense = -1 * float(sum([x.entry.amount for x in rs.entry_list if x.entry.mode == False]))
 
         #print(float((sum([x.value for x in rs.dft_acc]))))
         self.float_total = self.budget_total
@@ -274,6 +289,7 @@ class BudgetScroll(GridLayout):
         self.cols = 1
         self.child_count = 0
         self.is_updating = False
+        self.add_popup = None
 
         self.add_budget = Button(background_color=(0, 0, 0, 0), size_hint=(0.7, 0.7))
         self.budget_img = Image(source="Images/AddNewBudget.png", size_hint=(1, 1),
@@ -282,8 +298,6 @@ class BudgetScroll(GridLayout):
         self.add_budget.bind(pos=self.fix_img_pos, size=self.fix_img_pos, on_press=self.open_popup)
         self.add_budget.add_widget(self.budget_img)
         self.add_budget.add_widget(self.budget_text)
-        self.add_widget(BudgetUI(rs.dft_ctg[1]))
-        self.add_widget(BudgetUI(rs.dft_ctg[2]))
         self.add_widget(self.add_budget)
 
     def fix_img_pos(self, *args):
@@ -317,21 +331,23 @@ class BudgetScroll(GridLayout):
         self.do_layout()
         self.is_updating = False
 
-    @staticmethod
     def open_popup(self, *args):
+        rs.temp_ctg_budget = None
         temp_popup = Popup(title="Add Budget:", content=AddBudget(), size_hint=(0.9, 0.6))
+        self.add_popup = temp_popup
         temp_popup.open()
+
+    def close_popup(self, *args):
+        self.add_popup.dismiss()
 
 class BudgetUI(FloatLayout):
     amount_spent = NumericProperty(0.0)
 
-    def __init__(self, ctg: rs.Category, **kwargs):
+    def __init__(self, ctg: rs.Category, amount: float, **kwargs):
         super().__init__(**kwargs)
 
         self.ctg = ctg
-        self.budget_amount = 10000
-        rs.budgetUIs[self.ctg.name] = self
-        rs.main_widgets['acc_bdg_exp'].update_text()
+        self.budget_amount = amount
         self.amount_spent = float(sum([x.entry.amount for x in rs.entry_list if x.entry.ctg == self.ctg]))
         self.fill_width = (self.amount_spent / self.budget_amount) * 210 if self.amount_spent < self.budget_amount else 210
 
@@ -456,22 +472,60 @@ class AddBudget(FloatLayout):
         self.ctg_scroll_ui.bind(minimum_width=self.ctg_scroll_ui.setter('width'))
         self.ctg_scroll.add_widget(self.ctg_scroll_ui)
 
+        self.error_text_ctg = Label(text="Please choose a category!", size_hint=(0.5, 0.1),
+                                halign="center", pos_hint={'top': 0.76, 'x': 0.4},
+                                font_size=17, color=(1, 0.2, 0.2, 0))
+
+        self.confirm_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.05, 'center_x': 0.5},
+                                     text="Confirm")
+        self.confirm_button.bind(on_press=self.callback)
+
         self.add_widget(self.budget_text)
         self.add_widget(self.error_text)
         self.add_widget(self.budget_box)
         self.add_widget(self.currency_text)
         self.add_widget(self.ctg_text)
         self.add_widget(self.ctg_scroll)
+        self.add_widget(self.error_text_ctg)
+        self.add_widget(self.confirm_button)
 
     def on_focus(self, instance, value):
         if value:
             self.budget_box.foreground_color = (1, 1, 1, 1)
 
+    def callback(self, *args):
+        try:
+            t_budget = float(self.budget_box.text)
+            if t_budget <= 0 or str(t_budget).split(".")[1].__len__() > 2: raise ValueError
+            if rs.temp_ctg_budget is None or rs.temp_ctg_budget.name in rs.budgetUIs.keys(): raise rs.CategoryError
+            t_ctg = rs.temp_ctg_budget
+            t_budget_ui = BudgetUI(t_ctg, t_budget)
+            rs.budgetUIs[t_ctg.name] = t_budget_ui
+            rs.main_widgets['acc_bdg_exp'].update_text()
+            if rs.budget_groups.get(baf.rtrn_disp()) is None:
+                rs.budget_groups[baf.rtrn_disp()] = rs.BudgetGroup(baf.rtrn_disp())
+            if rs.budget_groups.get(baf.rtrn_disp()).budgets.get(t_ctg.name) is None:
+                rs.budget_groups[baf.rtrn_disp()].budgets[t_ctg.name] = t_budget
+            baf.save_entry_groups()
+            rs.main_widgets['budget_scroll'].add_widget(t_budget_ui)
+            rs.main_widgets['budget_scroll'].children = rs.main_widgets['budget_scroll'].children[1:] + [rs.main_widgets['budget_scroll'].children[0]]
+            t_budget_ui.amount_spent += 1
+            self.error_text.color = (1, 0.2, 0.2, 0)
+            self.error_text_ctg.color = (1, 0.2, 0.2, 0)
+            self.budget_box.foreground_color = (1, 1, 1, 1)
+            self.ctg_scroll_ui.update_buttons()
+            rs.main_widgets['budget_scroll'].close_popup()
+        except ValueError:
+            self.error_text.color = (1, 0.2, 0.2, 1)
+            self.budget_box.foreground_color = (1, 0.2, 0.2, 1)
+        except rs.CategoryError:
+            self.error_text_ctg.color = (1, 0.2, 0.2, 1)
+
 class CtgBudget(GridLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.child_buttons = []
-        self.remaining_ctg = [x for x in rs.dft_ctg if x not in rs.budgetUIs.values()]
+        self.remaining_ctg = [x for x in rs.dft_ctg if x.name not in rs.budgetUIs.keys()]
 
         with self.canvas.before:
             Color(22/255, 22/255, 22/255, 1)
@@ -484,7 +538,9 @@ class CtgBudget(GridLayout):
         #self.width = rs.ctg_view_width
         for i in range(rs.dft_ctg.__len__()):
             a = CtgButtonBudget(rs.dft_ctg[i], self, group="ctg_budget")
-            if a.ctg not in self.remaining_ctg: a.disabled = True
+            if a.ctg not in self.remaining_ctg:
+                a.disabled = True
+                a.img.color = (0.7, 0.7, 0.7, 0.7)
             self.child_buttons.append(a)
             self.add_widget(a)
 
@@ -495,14 +551,15 @@ class CtgBudget(GridLayout):
     def update_buttons(self, *args):
         self.clear_widgets()
         self.child_buttons.clear()
-        self.remaining_ctg = [x for x in rs.dft_ctg if x not in rs.budgetUIs.values()]
+        self.remaining_ctg = [x for x in rs.dft_ctg if x.name not in rs.budgetUIs.keys()]
 
         for i in range(rs.dft_ctg.__len__()):
             a = CtgButtonBudget(rs.dft_ctg[i], self, group="ctg_budget")
-            if a.ctg not in self.remaining_ctg: a.disabled = True
+            if a.ctg not in self.remaining_ctg:
+                a.disabled = True
+                a.img.color = (0.2, 0.2, 0.2, 0.4)
             self.child_buttons.append(a)
             self.add_widget(a)
-
 
 class CtgButtonBudget(ToggleButton):
     def __init__(self, ctg: rs.Category, parent, **kwargs):
@@ -535,6 +592,16 @@ class CtgButtonBudget(ToggleButton):
             rs.temp_ctg_budget = self.ctg
         else:
             self.background_color = (0, 0, 0, 0)
+
+    def _do_press(self, *args):
+        if (not self.allow_no_selection and
+                self.group and self.state == 'down'):
+            return
+        self._release_group(self)
+        if self.state == 'normal': self.state = 'down'
+        else:
+            if sum(x.state == 'down' for x in self.parent_widget.child_buttons) == 1: return
+            self.state = 'normal'
 
 #region Records
 class MainInterface(GridLayout):
@@ -1368,6 +1435,7 @@ class BaseApp(App):
         scroll_view_main = mid_layout
         if temp == 0:
             rs.temp_date_box.change_children()
+        rs.main_widgets['acc_bdg_exp'].update_text()
         return main_layout
 
     @staticmethod
