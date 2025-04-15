@@ -4,7 +4,6 @@ import random
 import math
 
 import kivy
-from docutils.nodes import entry
 from kivy.config import Config
 
 from resources import dft_currencies, currency_choice
@@ -41,7 +40,6 @@ import datetime
    transaction: Assigned to Expense/Deposit buttons in the entry creation menu'''
 
 scroll_view_main = ScrollView()
-view_no = 1 #0 for Analysis, 1 for Records and so on
 
 def re_construct_save():
     try:
@@ -340,6 +338,11 @@ class BudgetScroll(GridLayout):
     def close_popup(self, *args):
         self.add_popup.dismiss()
 
+    @staticmethod
+    def open_info_popup(budget, *args):
+        temp_popup = Popup(title="Budget Info", content=BudgetInfoPopup(budget), size_hint=(0.8, 0.5))
+        temp_popup.open()
+
 class BudgetUI(FloatLayout):
     amount_spent = NumericProperty(0.0)
 
@@ -417,7 +420,7 @@ class BudgetUI(FloatLayout):
 
     def show_info(self, *args):
         #rs.temp_layout.open_info_popup(self.entry, self)
-        pass
+        rs.main_widgets['budget_scroll'].open_info_popup(self)
 
     def update_pos(self, *args):
         self.overlay_button.pos = self.pos
@@ -435,6 +438,23 @@ class BudgetUI(FloatLayout):
         self.exceeded.color = (246 / 255, 68 / 255, 61 / 255, 1) if self.budget_amount - self.amount_spent < 0 else (0, 0, 0, 0)
         self.percentage_img_overlay.size_hint_y = 0.54 * (self.amount_spent/self.budget_amount) if self.budget_amount >= self.amount_spent else 0.54
         self.percentage_img_overlay.color = (0, 116/255, 129/255, 80/100) if self.budget_amount >= self.amount_spent else (246 / 255, 68 / 255, 61 / 255, 8/10)
+
+class BudgetInfoPopup(FloatLayout):
+    def __init__(self, budget: BudgetUI, **kwargs):
+        super().__init__(**kwargs)
+        self.budget = budget
+
+        self.banner = Image(color=baf.color_setter(-1 if self.budget.amount_spent > self.budget.budget_amount else 1, dft_less=(141 / 255, 10 / 255, 10 / 255, 1),
+                                                   dft_more=(40/255, 40/255, 40/255, 1)),
+                            pos_hint={'center_x': 0.5, 'top': 1.18},
+                            size_hint=(1.055, None), height=80)
+
+        self.title = Label(text=self.budget.ctg.name, pos_hint={'center_x': 0.5, 'top': 1.25},
+                           size_hint=(1, None), width=self.width,
+                           font_size=24)
+
+        self.add_widget(self.banner)
+        self.add_widget(self.title)
 
 class AddBudget(FloatLayout):
     def __init__(self, **kwargs):
@@ -476,6 +496,35 @@ class AddBudget(FloatLayout):
                                 halign="center", pos_hint={'top': 0.76, 'x': 0.4},
                                 font_size=17, color=(1, 0.2, 0.2, 0))
 
+        self.tick_box_img_b = Image(color=(1, 1, 1, 1), size_hint=(None, None),
+                                        height=32, width=32, pos_hint={'center_x': 0.15, 'center_y': 0.25})
+        self.tick_box_img_f = Image(color=(22 / 255, 22 / 255, 22 / 255, 1), size_hint=(None, None),
+                                        height=29, width=29, pos_hint={'center_x': 0.15, 'center_y': 0.25})
+        self.tick_box = ToggleButton(size_hint=(None, None), background_color=(0, 0, 0, 0),
+                                     height=29, width=29, pos_hint={'center_x': 0.15, 'center_y': 0.25})
+        self.tick_box_img = Image(source="Images/Tick.png", size_hint=(None, None),
+                                  height=29, width=29, pos_hint={'center_x': 0.15, 'center_y': 0.25},
+                                  color=(1, 1, 1, 0))
+        self.tick_box.bind(state=self.do_toggle)
+
+        self.repeat_label_top = Label(text="Repeat this budget for", size_hint=(0.5, 0.1),
+                                halign="center", pos_hint={'top': 0.38, 'center_x': 0.55},
+                                font_size=17)
+        self.repeat_box = TextInput(size_hint=(0.2, 0.08), pos_hint={'top': 0.29, 'center_x': 0.55},
+                                    multiline=False, input_type='number',
+                                    padding_y=(5, 5), halign='center',
+                                    background_color=(22 / 255, 22 / 255, 22 / 255, 1),
+                                    cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
+                                    padding_x=(10, 10), text="0")
+        self.repeat_box.bind(focus=self.on_focus_rpt)
+        self.repeat_label_bottom = Label(text="month(s). (max 12)", size_hint=(0.5, 0.1),
+                                      halign="center", pos_hint={'top': 0.22, 'center_x': 0.55},
+                                      font_size=17)
+
+        self.error_text_repeat = Label(text="Please type a valid integer!", size_hint=(0.5, 0.1),
+                                    halign="center", pos_hint={'top': 0.17, 'center_x': 0.55},
+                                    font_size=17, color=(1, 0.2, 0.2, 0))
+
         self.confirm_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.05, 'center_x': 0.5},
                                      text="Confirm")
         self.confirm_button.bind(on_press=self.callback)
@@ -487,11 +536,29 @@ class AddBudget(FloatLayout):
         self.add_widget(self.ctg_text)
         self.add_widget(self.ctg_scroll)
         self.add_widget(self.error_text_ctg)
+        self.add_widget(self.tick_box_img_b)
+        self.add_widget(self.tick_box_img_f)
+        self.add_widget(self.tick_box)
+        self.add_widget(self.tick_box_img)
+        self.add_widget(self.repeat_label_top)
+        self.add_widget(self.repeat_label_bottom)
+        self.add_widget(self.repeat_box)
+        self.add_widget(self.error_text_repeat)
         self.add_widget(self.confirm_button)
 
     def on_focus(self, instance, value):
         if value:
             self.budget_box.foreground_color = (1, 1, 1, 1)
+
+    def on_focus_rpt(self, instance, value):
+        if value:
+            self.repeat_box.foreground_color = (1, 1, 1, 1)
+
+    def do_toggle(self, instance, value):
+        if value == 'down':
+            self.tick_box_img.color = (1, 1, 1, 1)
+        else:
+            self.tick_box_img.color = (1, 1, 1, 0)
 
     def callback(self, *args):
         try:
@@ -506,6 +573,20 @@ class AddBudget(FloatLayout):
                 rs.budget_groups[baf.rtrn_disp()] = rs.BudgetGroup(baf.rtrn_disp())
             if rs.budget_groups.get(baf.rtrn_disp()).budgets.get(t_ctg.name) is None:
                 rs.budget_groups[baf.rtrn_disp()].budgets[t_ctg.name] = t_budget
+            if self.tick_box.state == 'down':
+                if self.repeat_box.text.isdigit() == False or not 12 >= int(self.repeat_box.text) > 0:
+                    raise rs.TickBoxValueError
+                repeat_amount = int(self.repeat_box.text)
+
+                for x in range(1, repeat_amount):
+                    temp_month = (rs.disp_month + x)
+                    temp_year = int(datetime.date.today().year) + (temp_month // 12)
+                    t_date = datetime.date(temp_year, temp_month % 12 + 1, 1)
+                    if rs.budget_groups.get(t_date) is None:
+                        rs.budget_groups[t_date] = rs.BudgetGroup(t_date)
+                    if rs.budget_groups.get(t_date).budgets.get(t_ctg.name) is None:
+                        rs.budget_groups[t_date].budgets[t_ctg.name] = t_budget
+
             baf.save_entry_groups()
             rs.main_widgets['budget_scroll'].add_widget(t_budget_ui)
             rs.main_widgets['budget_scroll'].children = rs.main_widgets['budget_scroll'].children[1:] + [rs.main_widgets['budget_scroll'].children[0]]
@@ -513,6 +594,8 @@ class AddBudget(FloatLayout):
             self.error_text.color = (1, 0.2, 0.2, 0)
             self.error_text_ctg.color = (1, 0.2, 0.2, 0)
             self.budget_box.foreground_color = (1, 1, 1, 1)
+            self.error_text_repeat.color = (1, 0.2, 0.2, 0)
+            self.repeat_box.foreground_color = (1, 1, 1, 1)
             self.ctg_scroll_ui.update_buttons()
             rs.main_widgets['budget_scroll'].close_popup()
         except ValueError:
@@ -520,6 +603,9 @@ class AddBudget(FloatLayout):
             self.budget_box.foreground_color = (1, 0.2, 0.2, 1)
         except rs.CategoryError:
             self.error_text_ctg.color = (1, 0.2, 0.2, 1)
+        except rs.TickBoxValueError:
+            self.error_text_repeat.color = (1, 0.2, 0.2, 1)
+            self.repeat_box.foreground_color = (1, 0.2, 0.2, 1)
 
 class CtgBudget(GridLayout):
     def __init__(self, **kwargs):
@@ -758,7 +844,7 @@ class EntryInfoPopup(FloatLayout):
                           text_size=(250, None))
         self.fix_lines()
 
-        self.confirm_popup = Popup(title="Are you sure?", content=ConfirmPopup(self.del_entry), size_hint=(0.6, 0.3))
+        self.confirm_popup = Popup(title="Are you sure?", content=ConfirmPopup(self.del_entry), size_hint=(0.6, 0.2))
         rs.mini_popup = self.confirm_popup
         self.delete_entry = Button(size_hint=(None, None), width=45,
                                    height=45, pos_hint={'center_x': 0.9, 'top': 1.15},
@@ -848,8 +934,8 @@ class EntryInfoPopup(FloatLayout):
 class ConfirmPopup(FloatLayout):
     def __init__(self, func, **kwargs):
         super().__init__(**kwargs)
-        self.button = Button(text="Confirm", size_hint=(1, None), height=25,
-                             pos_hint={'center_x':0.5, 'top':0.2})
+        self.button = Button(text="Confirm", size_hint=(1, None), height=40,
+                             pos_hint={'center_x':0.5, 'top':0.3})
         self.button.bind(on_press=func)
         self.add_widget(self.button)
 

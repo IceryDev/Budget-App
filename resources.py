@@ -118,3 +118,7 @@ class IndexMissingError(Exception):
 class CategoryError(Exception):
     #See main, AddBudget, callback
     pass
+
+class TickBoxValueError(Exception):
+    #See main, AddBudget, callback
+    pass
