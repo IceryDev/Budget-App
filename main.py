@@ -1,7 +1,5 @@
 import calendar
 import itertools
-import random
-import math
 
 import kivy
 from kivy.config import Config
@@ -38,6 +36,8 @@ import datetime
    date: Assigned to the date selection buttons in the entry creation menu
    main: Assigned to the main navigation buttons
    transaction: Assigned to Expense/Deposit buttons in the entry creation menu'''
+
+__version__ = "1.0.0"
 
 scroll_view_main = ScrollView()
 
