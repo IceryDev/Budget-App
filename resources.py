@@ -79,17 +79,14 @@ class BudgetGroup:
         if self.group_type > 1:
              self.end = end_date
 
-dft_acc = [Account("Cash", "Images/cash_acc.png"), Account("Card","Images/card_acc.png"), Account("Savings", "Images/Analytics.png")]
+dft_acc = [Account("Cash", "Images/cash_acc.png"), Account("Card","Images/card_acc.png"), Account("Savings", "Images/savings_acc.png")]
 dft_ctg = [Category("Food", "Images/food_ctg.png"), Category("Transport", "Images/transport_ctg.png"),
            Category("Communication", "Images/comms_ctg.png"), Category("Tourism", "Images/tourism_ctg.png"),
            Category("Clothing", "Images/clothing_ctg.png"), Category("Cleaning", "Images/cleaning_ctg.png"),
            Category("Home", "Images/home_ctg.png")]
-income_ctg = Category("Income", "Images/Analytics.png")
+income_ctg = Category("Income", "Images/income_ctg.png")
 view_height = 0 #Adjusts the main scroll view
 ctg_view_width = 0 #Adjusts the new entry popup scroll view
-dft_currencies = [["€", True], ["$", True], ["₺", False], ["₽", False]] #True if the symbol is to the left, False if it is to the right.
-currency_choice = 0 #The index of the currency above
-carry_budget_exceed = True
 temp_ctg = dft_ctg[0] #Passes the value from the child button object to parent object
 temp_ctg_budget = None #The same as above but for budget UI
 temp_entry = None #Passes the value to create it in the main view
@@ -106,6 +103,7 @@ budget_groups: dict[datetime.date:BudgetGroup] = {}
 serializable_groups = {}
 shown_entries = 10
 main_widgets = {} # Stores various necessary widgets to pass them to other sections of the code. See main.py, BaseApp
+main_buttons = []
 
 class PlaceDoesNotExistError(Exception):
     #See ba_funcs, align_currency_text
@@ -122,3 +120,9 @@ class CategoryError(Exception):
 class TickBoxValueError(Exception):
     #See main, AddBudget, callback
     pass
+
+##Options
+dft_currencies = [["€", True], ["$", True], ["₺", False], ["₽", False]] #True if the symbol is to the left, False if it is to the right.
+currency_choice = 0 #The index of the currency above
+carry_budget_exceed = True #Does nothing yet
+

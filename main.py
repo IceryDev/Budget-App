@@ -40,6 +40,7 @@ import datetime
 __version__ = "1.0.0"
 
 scroll_view_main = ScrollView()
+view_id = 1
 
 def re_construct_save():
     try:
@@ -1633,6 +1634,16 @@ class ScreenButton(ToggleButton):
         else:
             self.background_color = (0, 0, 0, 0)
 
+    def _do_press(self, *args):
+        if (not self.allow_no_selection and
+                self.group and self.state == 'down'):
+            return
+        self._release_group(self)
+        if self.state == 'normal': self.state = 'down'
+        else:
+            if sum(x.state == 'down' for x in rs.main_buttons) == 1: return
+            self.state = 'normal'
+
 class BaseApp(App):
     def build(self):
         global scroll_view_main
@@ -1671,11 +1682,13 @@ class BaseApp(App):
 
         funcs = [self.analysis_screen, self.records_screen, self.budget_screen, self.accounts_screen]
         button_text = ["Analysis", "Records", "Budgets", "Edit"]
-        button_img = ["Images/Analytics.png", "Images/Records.png", "Images/Analytics.png", "Images/Analytics.png"]
+        button_img = ["Images/Analytics.png", "Images/Records.png", "Images/Budgets.png", "Images/Analytics.png"]
 
         for i in range(1, 5):
-            bottom_button_ly.add_widget(ScreenButton(button_img[i-1], button_text[i-1], funcs[i-1], i, background_color=(0, 0, 0, 0), group="main",
-                                                     state='down' if i == 2 else 'normal'))
+            a = ScreenButton(button_img[i-1], button_text[i-1], funcs[i-1], i, background_color=(0, 0, 0, 0), group="main",
+                                                     state='down' if i == 2 else 'normal')
+            rs.main_buttons.append(a)
+            bottom_button_ly.add_widget(a)
         rs.main_widgets['m_buttons'] = bottom_button_ly
         rs.main_widgets['entry_button'] = bottom_entry_ly
 
@@ -1694,7 +1707,9 @@ class BaseApp(App):
         return main_layout
 
     @staticmethod
-    def budget_screen(): # Fix this when you implement the third tab, because some of the widgets removed here won't be in that one
+    def budget_screen():
+        global view_id
+        if view_id == 2: return # Fix this when you implement the third tab, because some of the widgets removed here won't be in that one
         rs.main_widgets['main'].remove_widget(rs.main_widgets['acc_bal_exp'])
         rs.main_widgets['main'].remove_widget(rs.main_widgets['empty'])
         rs.main_widgets['main'].remove_widget(rs.main_widgets['entry_button'])
@@ -1705,9 +1720,12 @@ class BaseApp(App):
             if rs.budgetUIs.get(ctg.name):
                 rs.budgetUIs[ctg.name].amount_spent += 1
         rs.main_widgets['main'].do_layout()
+        view_id = 2
 
     @staticmethod
     def records_screen():
+        global view_id
+        if view_id == 1: return
         rs.main_widgets['main'].add_widget(rs.main_widgets['acc_bal_exp'])
         rs.main_widgets['main'].add_widget(rs.main_widgets['empty'])
         rs.main_widgets['main'].add_widget(rs.main_widgets['entry_button'])
@@ -1715,6 +1733,7 @@ class BaseApp(App):
         scroll_view_main.remove_widget(rs.main_widgets['budget_scroll'])
         scroll_view_main.add_widget(rs.temp_layout)
         rs.main_widgets['main'].do_layout()
+        view_id = 1
 
     @staticmethod
     def analysis_screen():
