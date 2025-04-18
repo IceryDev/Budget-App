@@ -38,4 +38,5 @@ A finance management app made using the Kivy framework. This app is still in dev
     python main.py
 
 Notes:
-- I am still working on building the app for Android, the release will be available here once that happens.
+- I am still testing the app on Android, you can check the latest release to see its progress.
+- REMINDER: Most parts of the UI is broken on this build.
