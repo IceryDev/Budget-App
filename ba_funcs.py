@@ -1,7 +1,7 @@
 import resources
 import calendar
 import datetime
-import dill
+import pickle
 
 def align_currency_text(alignment: bool, place: str): #True if the symbol is to the left, False if it is to the right.
     match place:
@@ -35,12 +35,12 @@ def save_entry_groups():
     for key, value in resources.entry_groups.items():
         resources.serializable_groups[key] = resources.EntryGroup(key, entries=[x.entry for x in value.entries])
     with open('logs.pkl', 'wb') as file:
-        dill.dump([resources.serializable_groups, resources.dft_acc, resources.dft_ctg, resources.budget_groups], file)
+        pickle.dump([resources.serializable_groups, resources.dft_acc, resources.dft_ctg, resources.budget_groups], file)
 
 def load_entry_groups():
     try:
         with open('logs.pkl', 'rb') as file:
-            temp_list = dill.load(file)
+            temp_list = pickle.load(file)
             resources.serializable_groups = temp_list[0]
             resources.dft_acc = temp_list[1]
             resources.dft_ctg = temp_list[2]

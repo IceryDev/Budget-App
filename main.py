@@ -572,6 +572,9 @@ class BudgetInfoPopup(FloatLayout):
         except ValueError:
             self.error_text.color = (1, 0.2, 0.2, 1)
             self.budget_box.foreground_color = (1, 0.2, 0.2, 1)
+        except IndexError:
+            self.amount_box.foreground_color = (1, 0.2, 0.2, 1)
+            self.error_text.color = (1, 0.2, 0.2, 1)
         except rs.TickBoxValueError:
             self.error_text_repeat.color = (1, 0.2, 0.2, 1)
             self.repeat_box.foreground_color = (1, 0.2, 0.2, 1)
@@ -769,6 +772,9 @@ class AddBudget(FloatLayout):
             self.ctg_scroll_ui.update_buttons()
             rs.main_widgets['budget_scroll'].close_popup()
         except ValueError:
+            self.error_text.color = (1, 0.2, 0.2, 1)
+            self.budget_box.foreground_color = (1, 0.2, 0.2, 1)
+        except IndexError:
             self.error_text.color = (1, 0.2, 0.2, 1)
             self.budget_box.foreground_color = (1, 0.2, 0.2, 1)
         except rs.CategoryError:
