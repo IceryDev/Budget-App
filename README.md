@@ -30,7 +30,7 @@ A finance management app made using the Kivy framework. This app is still in dev
 2. Install dependencies:
 
     ```bash
-    pip install kivy dill
+    pip install kivy
 
 3. Run the app:
 
