@@ -1,9 +1,9 @@
 import calendar
 import itertools
-import math
 
 import kivy
 from kivy.config import Config
+from kivy.uix.widget import Widget
 
 from resources import dft_currencies, currency_choice
 
@@ -26,7 +26,6 @@ from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.properties import NumericProperty
 from kivy.metrics import Metrics
-from kivy.core.window import WindowBase
 
 from functools import partial
 import resources as rs
@@ -992,46 +991,45 @@ class EntryInfoPopup(FloatLayout):
 
         self.banner = Image(color=baf.color_setter(1 if self.entry.mode else -1, dft_less=(141 / 255, 10 / 255, 10 / 255, 1)),
                             pos_hint={'center_x':0.5, 'top':1.18},
-                            size_hint=(None, None), height=65*Metrics.density, width=Window.width * 0.775)
-        self.title = Label(text="Expense" if not self.entry.mode else "Income", pos_hint={'center_x':0.5, 'top':1.25},
-                           size_hint=(1, None), width=self.width,
+                            size_hint=(1+0.05*get_ratio(), None), height=65*Metrics.density)
+        self.title = Label(text="Expense" if not self.entry.mode else "Income", pos_hint={'center_x':0.5, 'top':1.18},
+                           size_hint=(1, 0.2), width=self.width,
                            font_size=18*Metrics.density)
         self.acc_icon = Image(source=self.entry.acc.icon_path,
                               size_hint=(None, None), width=55*Metrics.density,
-                              height=55*Metrics.density, pos_hint={'center_x':self.a, 'top':0.8})
+                              height=55*Metrics.density, pos_hint={'center_x':self.a, 'center_y':0.7})
         self.ctg_icon = Image(source=self.entry.ctg.icon_path,
                               size_hint=(None, None), width=55*Metrics.density,
-                              height=55*Metrics.density, pos_hint={'center_x': self.b, 'top': 0.8})
-        self.a1 = Image(source="Images/arrow_right.png",
-                              size_hint=(None, None), width=45*Metrics.density,
-                              height=45*Metrics.density, pos_hint={'center_x':0.47, 'top':0.77})
+                              height=55*Metrics.density, pos_hint={'center_x': self.b, 'center_y':0.7})
+        self.a1 = Image(source="Images/arrow_right.png", size_hint=(None, None), width=45*Metrics.density,
+                              height=45*Metrics.density, pos_hint={'center_x':0.47, 'center_y':0.7})
         self.a2 = Image(source="Images/arrow_right.png",
                         size_hint=(None, None), width=45*Metrics.density,
-                              height=45*Metrics.density, pos_hint={'center_x': 0.56, 'top': 0.77})
+                              height=45*Metrics.density, pos_hint={'center_x': 0.56, 'center_y':0.7})
         self.amount_text = Label(text=f"{'-' if entry.mode == False else '+'}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{entry.amount}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
-                                 pos_hint={'center_x': 0.5, 'top': 1},
-                                 size_hint=(1, None), width=self.width,
+                                 pos_hint={'center_x': 0.5, 'y': 0.7+(self.acc_icon.height/(4*self.height * Metrics.density))},
+                                 size_hint=(1, 0.05), valign='middle',
                                  color=(191/255, 30/255, 30/255, 1) if entry.mode == False else (127/255, 199/255, 127/255, 1),
-                                 font_size=24)
+                                 font_size=19*Metrics.density, halign='center')
         self.acc_text = Label(text=self.entry.acc.name,
-                              pos_hint={'center_x': self.a, 'top': 0.7},
-                              size_hint=(1, None), width=50*get_ratio())
+                              pos_hint={'center_x': self.a, 'top': 0.7-(self.acc_icon.height/(4*self.height * Metrics.density))},
+                              size_hint=(1, 0.05))
         self.ctg_text = Label(text=self.entry.ctg.name,
-                              pos_hint={'center_x': self.b, 'top': 0.7},
-                              size_hint=(1, None), width=50*get_ratio())
+                              pos_hint={'center_x': self.b, 'top': 0.7-(self.ctg_icon.height/(4*self.height * Metrics.density))},
+                              size_hint=(1, 0.05))
         self.desc_text = Label(text="Description",
-                              pos_hint={'center_x': 0.5, 'top': 0.62},
-                              size_hint=(1, None), width=50*get_ratio())
+                              pos_hint={'center_x': 0.5, 'y': 0.4},
+                              size_hint=(1, 0.1), width=50*get_ratio())
         self.desc_box = FloatLayout(size_hint=(1, None),
-                             height=90*Metrics.density, pos_hint={'center_x': 0.5, 'top': 0.4})
+                             height=Window.height/6.89, pos_hint={'center_x': 0.5, 'top': 0.4})
         self.desc_bg = Image(size_hint=(1, 1),
                              pos_hint={'center_x': 0.5, 'center_y':0.5},
                              color=(22/255, 22/255, 22/255, 1))
         self.desc_box.add_widget(self.desc_bg)
 
         self.desc = Label(text="", pos_hint={'center_x': 0.5, 'center_y':0.46},
-                          size_hint=(1, None), height=80*Metrics.density,
-                          text_size=(250, None))
+                          size_hint=(1, None), height=Window.height/7.75,
+                          text_size=(self.desc_box.width, None))
         self.fix_lines()
 
         self.confirm_popup = Popup(title="Are you sure?", content=ConfirmPopup(self.del_entry), size_hint=(0.6, 0.2))
@@ -1060,7 +1058,6 @@ class EntryInfoPopup(FloatLayout):
         self.add_widget(self.ctg_icon)
         self.add_widget(self.amount_text)
         self.add_widget(self.acc_text)
-
         self.add_widget(self.ctg_text)
         self.add_widget(self.desc_box)
         self.add_widget(self.desc_text)
@@ -1182,22 +1179,22 @@ class PopupLayout(FloatLayout):
 
         self.amount_text = Label(text="Amount:", size_hint=(1, 0.1),
                                  halign="left", pos_hint={'top':1.05, 'x':0.035},
-                                 font_size=17 * Metrics.density)
+                                 font_size=14 * Metrics.density)
         self.error_text = Label(text="Please enter a valid amount!", size_hint=(0.5, 0.1),
                                  halign="center", pos_hint={'top': 1.02, 'x': 0.4},
-                                 font_size=17 * Metrics.density, color=(1, 0.2, 0.2, 0))
+                                 font_size=14 * Metrics.density, color=(1, 0.2, 0.2, 0))
         self.amount_text.bind(size=self.amount_text.setter('text_size'))
 
         self.amount_box= TextInput(size_hint=(0.935, 0.1), pos_hint={'top':0.94, 'x':0.035},
-                                   multiline=False, input_type='number',
-                                   padding_y=(15, 5), halign='center',
+                                   multiline=False, input_type='number', font_size=14 * Metrics.density,
+                                   halign='center',
                                    background_color=(22/255, 22/255, 22/255, 1),
                                    cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
                                    padding_x=(10 * Metrics.density, 10 * Metrics.density), text="0")
-        self.amount_box.bind(focus=self.on_focus)
+        self.amount_box.bind(focus=self.on_focus, height=self._update_padding)
         self.currency_text = Label(text=rs.dft_currencies[rs.currency_choice][0], size_hint=(0.1, 0.1),
                                    pos_hint={'top':0.94, 'x':baf.align_currency_text(rs.dft_currencies[rs.currency_choice][1], place='text_box')},
-                                   font_size=17)
+                                   font_size=14 * Metrics.density)
         self.transaction_choice = GridLayout(cols=2, rows=1,
                                              size_hint=(0.735, 0.05), pos_hint={'top':0.84, 'center_x':0.5})
 
@@ -1211,7 +1208,7 @@ class PopupLayout(FloatLayout):
 
         self.account_select = DropDown()
         for i in range(rs.dft_acc.__len__()):
-            self.account_ui = AccountUI(i, size_hint_y=None, height=40)
+            self.account_ui = AccountUI(i, size_hint_y=None, height=Window.height/16)
             self.account_choice = self.account_ui.button
             self.account_choice.bind(on_release=lambda a: self.account_select.select(a.no))
             self.account_select.bind(on_select=lambda instance, a: setattr(self, 't_acc', rs.dft_acc[a]))
@@ -1223,7 +1220,7 @@ class PopupLayout(FloatLayout):
 
         self.ctg_text = Label(text="Category:", size_hint=(1, 0.1),
                                  halign="left", pos_hint={'top': 0.7, 'x': 0.035},
-                                 font_size=17)
+                                 font_size=14 * Metrics.density)
         self.ctg_text.bind(size=self.ctg_text.setter('text_size'))
 
         self.ctg_scroll = ScrollView(do_scroll_x=True,
@@ -1238,7 +1235,7 @@ class PopupLayout(FloatLayout):
 
         self.desc_text = Label(text="Description:", size_hint=(1, 0.1),
                               halign="left", pos_hint={'top': 0.46, 'x': 0.035},
-                              font_size=17)
+                              font_size=14 * Metrics.density)
         self.desc_text.bind(size=self.desc_text.setter('text_size'))
 
         self.desc_box = TextInput(size_hint=(0.935, 0.2), pos_hint={'top': 0.35, 'x': 0.035},
@@ -1271,6 +1268,11 @@ class PopupLayout(FloatLayout):
         self.add_widget(self.date_choice)
         self.add_widget(self.confirm_button)
         self.add_widget(self.ctg_cover)
+
+    def _update_padding(self, instance, value):
+        line_height = self.amount_box.line_height
+        total_padding = (self.amount_box.height - line_height) / 2
+        self.amount_box.padding_y = (total_padding, 0)
 
     def expense(self, instance, value):
         if value == 'down':
@@ -1385,7 +1387,8 @@ class DateSelection(FloatLayout):
         self.add_widget(self.l_button)
 
         self.date_text = Label(text=f"{rs.month_names[self.displayed_month % 12 - 1]}, {self.displayed_year}",
-                               pos_hint={'center_x':0.5, 'top':0.97}, size_hint=(None, None), height=30)
+                               pos_hint={'center_x':0.5, 'top':0.97}, size_hint=(None, None), height=25*Metrics.density,
+                               valign="middle")
         self.add_widget(self.date_text)
 
         self.r_button = Button(size_hint=(None, None),
@@ -1521,7 +1524,8 @@ class CtgButton(ToggleButton):
         self.background_down = 'white'
 
         self.img = Image(source=self.ctg.icon_path)
-        self.name = Label(text=self.ctg.name, font_size=14)
+        self.name = Label(text=self.ctg.name, font_size=11 * Metrics.density,
+                          text_size=(self.width * 3, self.height/1.05), halign="center", valign="bottom")
         self.bind(size=self._update_image_pos, pos=self._update_image_pos, state=self._state_change)
         self.add_widget(self.img)
         self.add_widget(self.name)
@@ -1531,11 +1535,10 @@ class CtgButton(ToggleButton):
         self.img.pos = self.pos
         self.img.width *= 8/9
         self.img.height *= 8/9
-        self.img.y += 13
-        self.img.x += 5
+        self.img.y += (self.height-self.img.height)
+        self.img.x += (self.width - self.img.width) / 2
         self.name.pos = self.pos
-        self.name.y -= 40
-        self.name.x -= 5
+        self.name.center_x = self.center_x
 
     def _state_change(self, instance, value):
         if value == 'down':
@@ -1582,13 +1585,14 @@ class AccountUI(FloatLayout):
         self.float_amount = 0.0
         self.background = Image(color=(22/255, 22/255, 22/255, 1), size_hint=(1,1), pos_hint={'top':1})
         self.button = NumericalButton(text=rs.dft_acc[no].name, size_hint_y=None, height=40, no=no,
-                                      background_color=(0, 0, 0, 0), pos_hint={'top':1})
-        self.icon = Image(source=rs.dft_acc[no].icon_path, pos_hint={'top':1, 'x':-0.4})
+                                      background_color=(0, 0, 0, 0), pos_hint={'center_y': 0.5})
+        self.icon = Image(source=rs.dft_acc[no].icon_path, pos_hint={'center_y': 0.5, 'x':-0.4})
         self.balance_int = Label(
             text=f"{baf.sign_setter(rs.dft_acc[no].value)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(rs.dft_acc[no].value)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
-            pos_hint={'top': 1.245, 'center_x':0.8},
+            pos_hint={'center_y': 0.5, 'center_x':0.8},
             color=baf.color_setter(rs.dft_acc[no].value),
-            size_hint_x=1, halign='right', text_size=self.size)
+            size_hint_x=1, halign='right', text_size=self.size,
+            valign='middle')
         self.bind(amount=self.update_text)
         self.add_widget(self.background)
         self.add_widget(self.button)
