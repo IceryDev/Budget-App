@@ -7,7 +7,7 @@ from kivy.config import Config
 
 from resources import dft_currencies, currency_choice
 
-Config.set('graphics', 'width', '320') #Comment these while building apk
+Config.set('graphics', 'width', '320')
 Config.set('graphics', 'height', '620')
 
 from kivy.app import App
@@ -97,7 +97,8 @@ class TitleBox(BoxLayout):
         self.img.pos = self.menu_button.pos
 
     def menu_clicked(self, *args):
-        print(f"Yay {self}")
+        print(f"This feature is still in development and will be available in future versions.")
+        pass
 
 class DateBox(BoxLayout):
     def __init__(self, **kwargs):
@@ -357,10 +358,13 @@ class BudgetUI(FloatLayout):
     def __init__(self, ctg: rs.Category, amount: float, **kwargs):
         super().__init__(**kwargs)
 
+        self.outer_bar_width = Window.width / 2
+        self.inner_bar_width = self.outer_bar_width - (3 * Metrics.density)
+
         self.ctg = ctg
         self.budget_amount = amount
         self.amount_spent = float(sum([x.entry.amount for x in rs.entry_list if x.entry.ctg == self.ctg]))
-        self.fill_width = (self.amount_spent / self.budget_amount) * 210 * Metrics.density if self.amount_spent < self.budget_amount else 210 * Metrics.density
+        self.fill_width = (self.amount_spent / self.budget_amount) * self.inner_bar_width if self.amount_spent < self.budget_amount else self.inner_bar_width
 
         self.height = rs.view_height
         self.icon = Image(source=self.ctg.icon_path, pos_hint={'x':-0.165, 'center_y':0.75},
@@ -374,13 +378,13 @@ class BudgetUI(FloatLayout):
                                        size_hint=(None, None), height=14 * Metrics.density,
                                        width=self.fill_width * get_ratio(), pos_hint={'x':0.197, 'center_y':0.32})
         self.progress_bar_img_b = Image(color=(1, 1, 1, 1), size_hint=(None, None),
-                                      height=17 * Metrics.density, width=213 * Metrics.density, pos_hint={'x':0.194, 'center_y':0.32})
+                                        height=17 * Metrics.density, width=self.outer_bar_width, pos_hint={'x':0.194, 'center_y':0.32})
         self.progress_bar_img_f = Image(color=(22 / 255, 22 / 255, 22 / 255, 1), size_hint=(None, None),
-                                        height=14 * Metrics.density, width=210 * Metrics.density, pos_hint={'x':0.197, 'center_y':0.32})
+                                        height=14 * Metrics.density, width=self.inner_bar_width, pos_hint={'x':0.197, 'center_y':0.32})
         self.progress_bar_fill.bind()
         self.amount = Label(text=f"Budget: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
                             text_size=(Window.width / 2, None),
-                            pos_hint={'right': 0.95 * get_ratio(), 'center_y': 0.9},
+                            pos_hint={'x': 0.2, 'center_y': 0.9},
                             halign='right', shorten=True,
                             font_size=13 * Metrics.density)
 
@@ -403,9 +407,9 @@ class BudgetUI(FloatLayout):
                                     pos_hint={'x':0.77, 'top':0.7})
         self.percentage_img_overlay = Image(color=(0, 116/255, 129/255, 80/100), size_hint=(0.18, 0.01),
                                             pos_hint={'x': 0.77, 'y': 0.16})
-        self.percentage_txt = Label(text=f"100%", text_size=(int(Config.get('graphics', 'width')) / 4, None),
+        self.percentage_txt = Label(text=f"100%", text_size=(Window.width / 5.56, None),
                                     pos_hint={'center_x': 0.86, 'center_y': 0.45},
-                                    font_size=22 * Metrics.density, halign='center')
+                                    font_size=18 * Metrics.density, halign='center')
         self.bar = Image(pos_hint={'x': 0.05, 'center_y': 0.1},
                          size_hint=(0.9, 0.02), color=(88/255, 88/255, 88/255, 1))
         self.overlay_button = Button(background_color=(0, 0, 0, 0))
@@ -436,7 +440,7 @@ class BudgetUI(FloatLayout):
 
     def update_bar(self, *args): #This being triggered twice is NOT a bug, bind code is affected as this code changes the property again
         self.amount_spent = float(sum([x.entry.amount for x in rs.entry_list if x.entry.ctg == self.ctg]))
-        self.progress_bar_fill.width = (self.amount_spent / self.budget_amount) * 210 * Metrics.density if self.amount_spent < self.budget_amount else 210 * Metrics.density #The width of the bar
+        self.progress_bar_fill.width = (self.amount_spent / self.budget_amount) * self.inner_bar_width if self.amount_spent < self.budget_amount else self.inner_bar_width #The width of the bar
         self.amount.text = f"Budget: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.remaining.text = f"Remaining: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.budget_amount - self.amount_spent, 2)) if self.budget_amount - self.amount_spent > 0 else 0}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
         self.spent.text = f"Spent: {dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(round(self.amount_spent, 2))}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}"
@@ -1145,7 +1149,7 @@ class EntryButton(FloatLayout):
 
         self.button = Button(size_hint=(None, None),
                              pos_hint={'center_x':0.5, 'center_y':0.3},
-                             width=self.width/1.4,
+                             width=Window.width/5.5, height=Window.width/5.5,
                              background_color=(0, 0, 0, 0))
         self.img = Image(source="Images/addentry.png")
         self.button.add_widget(self.img)
@@ -1656,7 +1660,6 @@ class BaseApp(App):
         global scroll_view_main
         temp = re_construct_save()
         Window.clearcolor = (22/255, 22/255, 22/255, 1)
-        print(Config.get('graphics', 'width'), Config.get('graphics', 'height'), sep=" ")
 
         main_layout = FloatLayout()
         rs.main_widgets['main'] = main_layout
