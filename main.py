@@ -1,5 +1,6 @@
 import calendar
 import itertools
+from textwrap import shorten
 
 import kivy
 from kivy.config import Config
@@ -459,10 +460,10 @@ class BudgetInfoPopup(FloatLayout):
         self.banner = Image(color=baf.color_setter(-1 if self.budget.amount_spent > self.budget.budget_amount else 1, dft_less=(141 / 255, 10 / 255, 10 / 255, 1),
                                                    dft_more=(40/255, 40/255, 40/255, 1)),
                             pos_hint={'center_x': 0.5, 'top': 1.18},
-                            size_hint=(None, None), height=80*Metrics.density, width=Window.width * 0.775)
+                            size_hint=(None, None), height=80*Metrics.density, width=(Window.width**1.025)*0.665)
 
-        self.title = Label(text=self.budget.ctg.name, pos_hint={'center_x': 0.5, 'top': 1.25},
-                           size_hint=(1, None), width=self.width,
+        self.title = Label(text=self.budget.ctg.name, pos_hint={'center_x': 0.5, 'top': 1.18},
+                           size_hint=(1, 0.2), width=self.width,
                            font_size=18*Metrics.density)
 
         self.icon = Image(source=self.budget.ctg.icon_path, pos_hint={'center_x':0.5, 'top':1.03},
@@ -483,7 +484,7 @@ class BudgetInfoPopup(FloatLayout):
                                     background_color=(22 / 255, 22 / 255, 22 / 255, 1),
                                     cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
                                     padding_x=(8*Metrics.density, 8*Metrics.density), text=str(self.budget.budget_amount))
-        self.budget_box.bind(focus=self.on_focus)
+        self.budget_box.bind(focus=self.on_focus, height=self._update_padding)
 
         self.currency_text = Label(text=rs.dft_currencies[rs.currency_choice][0], size_hint=(0.1, 0.1),
                                    pos_hint={'top': 0.685,
@@ -517,9 +518,9 @@ class BudgetInfoPopup(FloatLayout):
                                     background_color=(22 / 255, 22 / 255, 22 / 255, 1),
                                     cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
                                     padding_x=(8*Metrics.density, 8*Metrics.density), text="0")
-        self.repeat_box.bind(focus=self.on_focus_rpt)
+        self.repeat_box.bind(focus=self.on_focus_rpt, height=self._update_padding)
         self.repeat_label_bottom = Label(text="instances of this budget. (max 12)", size_hint=(0.5, 0.1),
-                                         text_size=(int(Config.get('graphics', 'width')) / 2.2, None),
+                                         text_size=(Window.width / 2.2, None),
                                          halign="center", pos_hint={'top': 0.22, 'center_x': 0.55},
                                          font_size=14*Metrics.density)
 
@@ -628,6 +629,14 @@ class BudgetInfoPopup(FloatLayout):
             self.error_text_repeat.color = (1, 0.2, 0.2, 1)
             self.repeat_box.foreground_color = (1, 0.2, 0.2, 1)
 
+    def _update_padding(self, instance, value):
+        line_height = self.budget_box.line_height
+        total_padding = (self.budget_box.height - line_height) / 2
+        self.budget_box.padding_y = (total_padding, 0)
+        line_height = self.repeat_box.line_height
+        total_padding = (self.repeat_box.height - line_height) / 2
+        self.repeat_box.padding_y = (total_padding, 0)
+
     def do_toggle(self, instance, value):
         if value == 'down':
             self.tick_box_img.color = (1, 1, 1, 1)
@@ -648,10 +657,10 @@ class AddBudget(FloatLayout):
 
         self.budget_text = Label(text="Budget:", size_hint=(1, 0.1),
                                  halign="left", pos_hint={'top': 1.025, 'x': 0.035},
-                                 font_size=17)
+                                 font_size=14 * Metrics.density)
         self.error_text = Label(text="Please enter a valid amount!", size_hint=(0.5, 0.1),
                                 halign="center", pos_hint={'top': 1.0, 'x': 0.4},
-                                font_size=17, color=(1, 0.2, 0.2, 0))
+                                font_size=14 * Metrics.density, color=(1, 0.2, 0.2, 0))
         self.budget_text.bind(size=self.budget_text.setter('text_size'))
         self.budget_box = TextInput(size_hint=(0.935, 0.133), pos_hint={'top': 0.9, 'x': 0.035},
                                     multiline=False, input_type='number',
@@ -659,15 +668,15 @@ class AddBudget(FloatLayout):
                                     background_color=(22 / 255, 22 / 255, 22 / 255, 1),
                                     cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
                                     padding_x=(10, 10), text="0")
-        self.budget_box.bind(focus=self.on_focus)
+        self.budget_box.bind(focus=self.on_focus, height=self._update_padding)
 
         self.currency_text = Label(text=rs.dft_currencies[rs.currency_choice][0], size_hint=(0.1, 0.1),
                                    pos_hint={'top': 0.885, 'x': baf.align_currency_text(rs.dft_currencies[rs.currency_choice][1], place='text_box')},
-                                   font_size=17)
+                                   font_size=14 * Metrics.density)
 
         self.ctg_text = Label(text="Category:", size_hint=(1, 0.1),
                               halign="left", pos_hint={'top': 0.78, 'x': 0.035},
-                              font_size=17)
+                              font_size=14 * Metrics.density)
         self.ctg_text.bind(size=self.ctg_text.setter('text_size'))
 
         self.ctg_scroll = ScrollView(do_scroll_x=True,
@@ -680,36 +689,36 @@ class AddBudget(FloatLayout):
 
         self.error_text_ctg = Label(text="Please choose a category!", size_hint=(0.5, 0.1),
                                 halign="center", pos_hint={'top': 0.76, 'x': 0.4},
-                                font_size=17, color=(1, 0.2, 0.2, 0))
+                                font_size=14 * Metrics.density, color=(1, 0.2, 0.2, 0))
 
         self.tick_box_img_b = Image(color=(1, 1, 1, 1), size_hint=(None, None),
-                                        height=32, width=32, pos_hint={'center_x': 0.15, 'center_y': 0.25})
+                                        height=Window.width/10, width=Window.width/10, pos_hint={'center_x': 0.15, 'center_y': 0.25})
         self.tick_box_img_f = Image(color=(22 / 255, 22 / 255, 22 / 255, 1), size_hint=(None, None),
-                                        height=29, width=29, pos_hint={'center_x': 0.15, 'center_y': 0.25})
+                                        height=Window.width/11, width=Window.width/11, pos_hint={'center_x': 0.15, 'center_y': 0.25})
         self.tick_box = ToggleButton(size_hint=(None, None), background_color=(0, 0, 0, 0),
-                                     height=29, width=29, pos_hint={'center_x': 0.15, 'center_y': 0.25})
+                                     height=Window.width/11, width=Window.width/11, pos_hint={'center_x': 0.15, 'center_y': 0.25})
         self.tick_box_img = Image(source="Images/Tick.png", size_hint=(None, None),
-                                  height=29, width=29, pos_hint={'center_x': 0.15, 'center_y': 0.25},
+                                  height=Window.width/11, width=Window.width/11, pos_hint={'center_x': 0.15, 'center_y': 0.25},
                                   color=(1, 1, 1, 0))
         self.tick_box.bind(state=self.do_toggle)
 
         self.repeat_label_top = Label(text="Repeat this budget for", size_hint=(0.5, 0.1),
                                 halign="center", pos_hint={'top': 0.38, 'center_x': 0.55},
-                                font_size=17)
+                                font_size=14 * Metrics.density)
         self.repeat_box = TextInput(size_hint=(0.2, 0.08), pos_hint={'top': 0.29, 'center_x': 0.55},
                                     multiline=False, input_type='number',
                                     padding_y=(5, 5), halign='center',
                                     background_color=(22 / 255, 22 / 255, 22 / 255, 1),
                                     cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
                                     padding_x=(10, 10), text="0")
-        self.repeat_box.bind(focus=self.on_focus_rpt)
+        self.repeat_box.bind(focus=self.on_focus_rpt, height=self._update_padding)
         self.repeat_label_bottom = Label(text="month(s). (max 12)", size_hint=(0.5, 0.1),
                                       halign="center", pos_hint={'top': 0.22, 'center_x': 0.55},
-                                      font_size=17)
+                                      font_size=14 * Metrics.density)
 
         self.error_text_repeat = Label(text="Please type a valid integer!", size_hint=(0.5, 0.1),
                                     halign="center", pos_hint={'top': 0.17, 'center_x': 0.55},
-                                    font_size=17, color=(1, 0.2, 0.2, 0))
+                                    font_size=14 * Metrics.density, color=(1, 0.2, 0.2, 0))
 
         self.confirm_button = Button(size_hint=(0.935, 0.1), pos_hint={'top': 0.05, 'center_x': 0.5},
                                      text="Confirm")
@@ -731,6 +740,14 @@ class AddBudget(FloatLayout):
         self.add_widget(self.repeat_box)
         self.add_widget(self.error_text_repeat)
         self.add_widget(self.confirm_button)
+
+    def _update_padding(self, instance, value):
+        line_height = self.budget_box.line_height
+        total_padding = (self.budget_box.height - line_height) / 2
+        self.budget_box.padding_y = (total_padding, 0)
+        line_height = self.repeat_box.line_height
+        total_padding = (self.repeat_box.height - line_height) / 2
+        self.repeat_box.padding_y = (total_padding, 0)
 
     def on_focus(self, instance, value):
         if value:
@@ -845,7 +862,8 @@ class CtgButtonBudget(ToggleButton):
         self.background_down = 'white'
 
         self.img = Image(source=self.ctg.icon_path)
-        self.name = Label(text=self.ctg.name, font_size=14)
+        self.name = Label(text=self.ctg.name, font_size=11 * Metrics.density,
+                          text_size=(self.width * 3, self.height/1.05), halign="center", valign="bottom")
         self.bind(size=self._update_image_pos, pos=self._update_image_pos, state=self._state_change)
         self.add_widget(self.img)
         self.add_widget(self.name)
@@ -855,11 +873,10 @@ class CtgButtonBudget(ToggleButton):
         self.img.pos = self.pos
         self.img.width *= 7/9
         self.img.height *= 7/9
-        self.img.y += 16
-        self.img.x += 9
+        self.img.y += (self.height - self.img.height)
+        self.img.x += (self.width - self.img.width) / 2
         self.name.pos = self.pos
-        self.name.y -= 40
-        self.name.x -= 5
+        self.name.center_x = self.center_x
 
     def _state_change(self, instance, value):
         if value == 'down':
@@ -991,7 +1008,7 @@ class EntryInfoPopup(FloatLayout):
 
         self.banner = Image(color=baf.color_setter(1 if self.entry.mode else -1, dft_less=(141 / 255, 10 / 255, 10 / 255, 1)),
                             pos_hint={'center_x':0.5, 'top':1.18},
-                            size_hint=(1+0.05*get_ratio(), None), height=65*Metrics.density)
+                            size_hint=(None, None), width=(Window.width**1.025)*0.665, height=65*Metrics.density)
         self.title = Label(text="Expense" if not self.entry.mode else "Income", pos_hint={'center_x':0.5, 'top':1.18},
                            size_hint=(1, 0.2), width=self.width,
                            font_size=18*Metrics.density)
@@ -1013,10 +1030,10 @@ class EntryInfoPopup(FloatLayout):
                                  font_size=19*Metrics.density, halign='center')
         self.acc_text = Label(text=self.entry.acc.name,
                               pos_hint={'center_x': self.a, 'top': 0.7-(self.acc_icon.height/(4*self.height * Metrics.density))},
-                              size_hint=(1, 0.05))
+                              size_hint=(1, 0))
         self.ctg_text = Label(text=self.entry.ctg.name,
                               pos_hint={'center_x': self.b, 'top': 0.7-(self.ctg_icon.height/(4*self.height * Metrics.density))},
-                              size_hint=(1, 0.05))
+                              size_hint=(1, 0))
         self.desc_text = Label(text="Description",
                               pos_hint={'center_x': 0.5, 'y': 0.4},
                               size_hint=(1, 0.1), width=50*get_ratio())
@@ -1027,9 +1044,9 @@ class EntryInfoPopup(FloatLayout):
                              color=(22/255, 22/255, 22/255, 1))
         self.desc_box.add_widget(self.desc_bg)
 
-        self.desc = Label(text="", pos_hint={'center_x': 0.5, 'center_y':0.46},
-                          size_hint=(1, None), height=Window.height/7.75,
-                          text_size=(self.desc_box.width, None))
+        self.desc = Label(text="aAre you sure?", pos_hint={'center_x': 0.5, 'center_y':0.5},
+                          size_hint=(1, None), text_size=(Window.width/1.45, None), valign='top', font_size=14 * Metrics.density)
+        self.desc.texture_update()
         self.fix_lines()
 
         self.confirm_popup = Popup(title="Are you sure?", content=ConfirmPopup(self.del_entry), size_hint=(0.6, 0.2))
@@ -1100,21 +1117,26 @@ class EntryInfoPopup(FloatLayout):
 
     def fix_lines(self, *args):
         switch = True
+        initial = False
         temp = ''
+        one_line_texture = 0
         line_count = (self.desc.texture_size[1] / self.desc.line_height) / 22
         self.desc.text = temp
         self.desc.texture_update()
         for x in range(self.entry.description.__len__()):
             temp = temp + self.entry.description[x]
             self.desc.text = temp
-            line_count = (self.desc.texture_size[1] / self.desc.line_height) / 22
             self.desc.texture_update()
+            if not initial:
+                one_line_texture = self.desc.texture_size[1]
+                initial = True
+            line_count = (self.desc.texture_size[1] / self.desc.line_height) / one_line_texture
             if line_count > 4:
                 switch = False
                 break
         if not switch:
             temp = temp[:temp.__len__() - 4] + "..."
-        self.desc.text_size = (250, 100)
+        #self.desc.text_size = (250, 100)
         self.desc.valign = 'top'
         self.desc.text = temp
         self.desc.texture_update()
@@ -1122,8 +1144,8 @@ class EntryInfoPopup(FloatLayout):
 class ConfirmPopup(FloatLayout):
     def __init__(self, func, **kwargs):
         super().__init__(**kwargs)
-        self.button = Button(text="Confirm", size_hint=(1, None), height=40,
-                             pos_hint={'center_x':0.5, 'top':0.3})
+        self.button = Button(text="Confirm", size_hint=(1, None), height=Window.height/15.5,
+                             pos_hint={'center_x':0.5, 'top':0.7})
         self.button.bind(on_press=func)
         self.add_widget(self.button)
 
