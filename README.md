@@ -22,6 +22,7 @@ A finance management app made using the Kivy framework. This app is still in dev
 - There are currently 4 currencies available (They are quite easy to add though). However, the option cannot be changed within the app yet. To change this option, see the bottom section of resources.py for currency_choice variable.
   
 ## 💻 Installation
+### PC 
 1. Clone the repository:
 
     ```bash
@@ -37,6 +38,7 @@ A finance management app made using the Kivy framework. This app is still in dev
     ```bash
     python main.py
 
-Notes:
-- I am still testing the app on Android, you can check the latest release to see its progress.
-- REMINDER: Most parts of the UI is broken on this build.
+### Android
+1. Head to the "Releases" section to the right and click on "(number) tags"
+2. Find the latest release and download the .apk file.
+
