@@ -40,7 +40,7 @@ import datetime
    main: Assigned to the main navigation buttons
    transaction: Assigned to Expense/Deposit buttons in the entry creation menu'''
 
-__version__ = "1.0.0"
+__version__ = "0.2.1"
 
 scroll_view_main = ScrollView()
 view_id = 1
@@ -97,7 +97,7 @@ class TitleBox(BoxLayout):
         self.img.pos = self.menu_button.pos
 
     def menu_clicked(self, *args):
-        print(f"This feature is still in development and will be available in future versions.")
+        print(f"This feature is still in development and will be available in future versions. :)")
         pass
 
 class DateBox(BoxLayout):
@@ -341,6 +341,8 @@ class BudgetScroll(GridLayout):
         rs.temp_ctg_budget = None
         temp_popup = Popup(title="Add Budget:", content=AddBudget(), size_hint=(0.9, 0.6))
         self.add_popup = temp_popup
+        temp_popup.content.budget_box.text = "0"
+        temp_popup.content.repeat_box.text = "0"
         temp_popup.open()
 
     def close_popup(self, *args):
@@ -752,10 +754,14 @@ class AddBudget(FloatLayout):
     def on_focus(self, instance, value):
         if value:
             self.budget_box.foreground_color = (1, 1, 1, 1)
+            if self.budget_box.text == "0":
+                self.budget_box.text = ""
 
     def on_focus_rpt(self, instance, value):
         if value:
             self.repeat_box.foreground_color = (1, 1, 1, 1)
+            if self.repeat_box.text == "0":
+                self.repeat_box.text = ""
 
     def do_toggle(self, instance, value):
         if value == 'down':
@@ -1092,6 +1098,9 @@ class EntryInfoPopup(FloatLayout):
         rs.entry_groups[baf.rtrn_disp()].entries.remove(self.entry_ui)
         rs.temp_date_box.change_children()
         rs.main_widgets['acc_bdg_exp'].update_text()
+        for item in rs.main_widgets['add_entry'].account_select.children:
+            for item_2 in item.children:
+                item_2.update_text()  # All this does is update the text of the accounts in dropdown
         baf.save_entry_groups()
         rs.temp_popup.dismiss()
         rs.mini_popup.dismiss()
@@ -1174,6 +1183,7 @@ class EntryButton(FloatLayout):
         self.button.add_widget(self.img)
         self.button.bind(size=self._update_image_pos, pos=self._update_image_pos, on_press=self.entry_menu)
         self.menu_popup = Popup(title="Add Entry:", content=PopupLayout(is_edit=False), size_hint=(0.9, 0.8))
+        rs.main_widgets['add_entry'] = self.menu_popup.content
         self.add_widget(self.button)
 
     def _update_image_pos(self, *args):
@@ -1184,6 +1194,7 @@ class EntryButton(FloatLayout):
         #rs.chosen_date = datetime.date.today()
         self.menu_popup.open()
         self.menu_popup.content.popup = self.menu_popup
+        self.menu_popup.content.amount_box.text = "0"
 
 class PopupLayout(FloatLayout):
     def __init__(self, is_edit = False, edit_entry = None, **kwargs): #edit_entry is an EntryUI object
@@ -1259,12 +1270,18 @@ class PopupLayout(FloatLayout):
                               halign="left", pos_hint={'top': 0.46, 'x': 0.035},
                               font_size=14 * Metrics.density)
         self.desc_text.bind(size=self.desc_text.setter('text_size'))
+        self.erase_desc = Button(background_color=(0,0,0,0), pos_hint={'y': 0.35, 'right': 0.99},
+                                 size_hint=(None, None), width=Window.width/12, height=Window.width/12)
+        self.erase_desc_icon = Image(source="Images/delete_entry_w.png", color=(1,1,1,0.6))
 
         self.desc_box = TextInput(size_hint=(0.935, 0.2), pos_hint={'top': 0.35, 'x': 0.035},
                                     multiline=True, padding_y=(15, 5), halign='center',
                                     background_color=(22 / 255, 22 / 255, 22 / 255, 1),
                                     cursor_color=(1, 1, 1, 1), foreground_color=(1, 1, 1, 1),
                                     padding_x=(10, 10))
+
+        self.erase_desc.bind(on_press=partial(self.erase_amount, False), size=self._update_img, pos=self._update_img)
+        self.erase_desc.add_widget(self.erase_desc_icon)
 
         self.date_choice = Button(background_color=(66 / 255, 66 / 255, 66 / 255, 1),
                                   text=f"{rs.month_names[(datetime.date.today().month % 12) - 1]} {datetime.date.today().day}, {rs.disp_year}",
@@ -1286,6 +1303,7 @@ class PopupLayout(FloatLayout):
         self.add_widget(self.ctg_text)
         self.add_widget(self.ctg_scroll)
         self.add_widget(self.desc_text)
+        self.add_widget(self.erase_desc)
         self.add_widget(self.desc_box)
         self.add_widget(self.date_choice)
         self.add_widget(self.confirm_button)
@@ -1295,6 +1313,16 @@ class PopupLayout(FloatLayout):
         line_height = self.amount_box.line_height
         total_padding = (self.amount_box.height - line_height) / 2
         self.amount_box.padding_y = (total_padding, 0)
+
+    def _update_img(self, *args):
+        self.erase_desc_icon.pos = self.erase_desc.pos
+        self.erase_desc_icon.size = self.erase_desc.size
+
+    def erase_amount(self, mode: bool, *args):
+        if mode:
+            self.amount_box.text = ""
+        else:
+            self.desc_box.text = ""
 
     def expense(self, instance, value):
         if value == 'down':
@@ -1313,6 +1341,8 @@ class PopupLayout(FloatLayout):
     def on_focus(self, instance, value):
         if value:
             self.amount_box.foreground_color = (1, 1, 1, 1)
+            if self.amount_box.text == "0":
+                self.amount_box.text = ""
 
     def callback(self, *args):
         temp_date = datetime.date(rs.chosen_date.year, rs.chosen_date.month, 1)
@@ -1611,10 +1641,11 @@ class AccountUI(FloatLayout):
         self.icon = Image(source=rs.dft_acc[no].icon_path, pos_hint={'center_y': 0.5, 'x':-0.4})
         self.balance_int = Label(
             text=f"{baf.sign_setter(rs.dft_acc[no].value)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == True else ''}{abs(rs.dft_acc[no].value)}{dft_currencies[currency_choice][0] if dft_currencies[currency_choice][1] == False else ''}",
-            pos_hint={'center_y': 0.5, 'center_x':0.8},
+            pos_hint={'center_y': 0.5, 'right':1.275},
             color=baf.color_setter(rs.dft_acc[no].value),
-            size_hint_x=1, halign='right', text_size=self.size,
-            valign='middle')
+            size_hint_x=1, halign='right', text_size=(Window.width/3, self.height),
+            valign='middle', shorten=True)
+        #self.balance_int.bind(size=self.balance_int.setter('text_size'))
         self.bind(amount=self.update_text)
         self.add_widget(self.background)
         self.add_widget(self.button)
